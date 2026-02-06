@@ -1,0 +1,668 @@
+# Sanity test of python package
+Test-Command: cd test/ ; python3 -c "import sys, torch as th; print(sys.version, th.__path__, th.__version__)"
+Depends: python3-torch,
+Restrictions: allow-stderr
+Features: test-name=py_import_and_version
+
+Test-Command: cd debian/tests ; python3 blas.py
+Depends: python3-torch, libopenblas0
+Restrictions: allow-stderr
+Features: test-name=py_blas_openblas
+
+Test-Command: cd debian/tests ; python3 blas.py
+Depends: python3-torch, libblis4
+Restrictions: allow-stderr
+Features: test-name=py_blas_blis
+
+Test-Command: cd debian/tests ; python3 sequential.py
+Depends: python3-torch,
+Restrictions: allow-stderr
+Features: test-name=py_sequential
+
+# Check dangling symbol links
+#Test-Command: cd debian/tests ; export TH_PATH="$(python3 -c 'import torch; print(torch.__path__[0])')"; test -z "$(find ${TH_PATH}/lib -xtype l)"
+#Depends: python3-torch,
+#Restrictions: allow-stderr
+#Features: test-name=py_torch_no_dangling_symlink
+
+# We are only printing those for package maintainers. The find command may fail due to a dangling symlink from other packages.
+Test-Command: cd debian/tests ; find /usr -xtype l -print || true
+Depends: @
+Restrictions: allow-stderr
+Features: test-name=show_dangling_symlink_if_any
+
+# Real functionality test
+# We exclude s390x because the training data bytes are little-endian.
+Test-Command: sh debian/tests/train-mnist.sh
+Depends: @, python3-torchvision, dataset-fashion-mnist, libopenblas0
+Restrictions: allow-stderr
+Features: test-name=real_train_mnist
+Architecture: !s390x
+
+# Generating Autopkgtest Test Cases for the C++ Testing Programs
+# Found 104 tests
+#
+# C++ test 1/104
+Test-Command: /usr/lib/libtorch-test/CppSignature_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=1_of_104__cpptest__CppSignature_test
+Restrictions: allow-stderr
+
+# C++ test 2/104
+Test-Command: /usr/lib/libtorch-test/Dict_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=2_of_104__cpptest__Dict_test
+Restrictions: allow-stderr
+
+# C++ test 3/104
+Test-Command: /usr/lib/libtorch-test/Dimname_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=3_of_104__cpptest__Dimname_test
+Restrictions: allow-stderr
+
+# C++ test 4/104
+Test-Command: /usr/lib/libtorch-test/IListRef_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=4_of_104__cpptest__IListRef_test
+Restrictions: allow-stderr
+
+# C++ test 5/104
+Test-Command: /usr/lib/libtorch-test/KernelFunction_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=5_of_104__cpptest__KernelFunction_test
+Restrictions: allow-stderr
+
+# C++ test 6/104
+Test-Command: /usr/lib/libtorch-test/List_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=6_of_104__cpptest__List_test
+Restrictions: allow-stderr
+
+# C++ test 7/104
+Test-Command: /usr/lib/libtorch-test/MaybeOwned_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=7_of_104__cpptest__MaybeOwned_test
+Restrictions: allow-stderr
+
+# C++ test 8/104
+Test-Command: /usr/lib/libtorch-test/NamedTensor_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=8_of_104__cpptest__NamedTensor_test
+Restrictions: allow-stderr
+
+# C++ test 9/104
+Test-Command: /usr/lib/libtorch-test/StorageUtils_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=9_of_104__cpptest__StorageUtils_test
+Restrictions: allow-stderr
+
+# C++ test 10/104
+Test-Command: /usr/lib/libtorch-test/apply_utils_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=10_of_104__cpptest__apply_utils_test
+Restrictions: allow-stderr
+
+# C++ test 11/104
+Test-Command: /usr/lib/libtorch-test/atest
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=11_of_104__cpptest__atest
+Restrictions: allow-stderr
+
+# C++ test 12/104
+Test-Command: /usr/lib/libtorch-test/backend_fallback_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=12_of_104__cpptest__backend_fallback_test
+Restrictions: allow-stderr
+
+# C++ test 13/104
+Test-Command: /usr/lib/libtorch-test/basic
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=13_of_104__cpptest__basic
+Restrictions: allow-stderr
+
+# C++ test 14/104
+Test-Command: /usr/lib/libtorch-test/broadcast_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=14_of_104__cpptest__broadcast_test
+Restrictions: allow-stderr
+
+# C++ test 15/104
+Test-Command: /usr/lib/libtorch-test/c10_Bitset_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=15_of_104__cpptest__c10_Bitset_test
+Restrictions: allow-stderr
+
+# C++ test 16/104
+Test-Command: /usr/lib/libtorch-test/c10_CompileTimeFunctionPointer_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=16_of_104__cpptest__c10_CompileTimeFunctionPointer_test
+Restrictions: allow-stderr
+
+# C++ test 17/104
+Test-Command: /usr/lib/libtorch-test/c10_ConstexprCrc_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=17_of_104__cpptest__c10_ConstexprCrc_test
+Restrictions: allow-stderr
+
+# C++ test 18/104
+Test-Command: /usr/lib/libtorch-test/c10_DeadlockDetection_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=18_of_104__cpptest__c10_DeadlockDetection_test
+Restrictions: allow-stderr
+
+# C++ test 19/104
+Test-Command: /usr/lib/libtorch-test/c10_DeviceGuard_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=19_of_104__cpptest__c10_DeviceGuard_test
+Restrictions: allow-stderr
+
+# C++ test 20/104
+Test-Command: /usr/lib/libtorch-test/c10_Device_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=20_of_104__cpptest__c10_Device_test
+Restrictions: allow-stderr
+
+# C++ test 21/104
+Test-Command: /usr/lib/libtorch-test/c10_DispatchKeySet_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=21_of_104__cpptest__c10_DispatchKeySet_test
+Restrictions: allow-stderr
+
+# C++ test 22/104
+Test-Command: /usr/lib/libtorch-test/c10_Half_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=22_of_104__cpptest__c10_Half_test
+Restrictions: allow-stderr
+
+# C++ test 23/104
+Test-Command: /usr/lib/libtorch-test/c10_InlineDeviceGuard_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=23_of_104__cpptest__c10_InlineDeviceGuard_test
+Restrictions: allow-stderr
+
+# C++ test 24/104
+Test-Command: /usr/lib/libtorch-test/c10_InlineStreamGuard_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=24_of_104__cpptest__c10_InlineStreamGuard_test
+Restrictions: allow-stderr
+
+# C++ test 25/104
+Test-Command: /usr/lib/libtorch-test/c10_LeftRight_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=25_of_104__cpptest__c10_LeftRight_test
+Restrictions: allow-stderr
+
+# C++ test 26/104
+Test-Command: /usr/lib/libtorch-test/c10_Metaprogramming_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=26_of_104__cpptest__c10_Metaprogramming_test
+Restrictions: allow-stderr
+
+# C++ test 27/104
+Test-Command: /usr/lib/libtorch-test/c10_NetworkFlow_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=27_of_104__cpptest__c10_NetworkFlow_test
+Restrictions: allow-stderr
+
+# C++ test 28/104
+Test-Command: /usr/lib/libtorch-test/c10_Scalar_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=28_of_104__cpptest__c10_Scalar_test
+Restrictions: allow-stderr
+
+# C++ test 29/104
+Test-Command: /usr/lib/libtorch-test/c10_SizesAndStrides_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=29_of_104__cpptest__c10_SizesAndStrides_test
+Restrictions: allow-stderr
+
+# C++ test 30/104
+Test-Command: /usr/lib/libtorch-test/c10_StreamGuard_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=30_of_104__cpptest__c10_StreamGuard_test
+Restrictions: allow-stderr
+
+# C++ test 31/104
+Test-Command: /usr/lib/libtorch-test/c10_SymInt_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=31_of_104__cpptest__c10_SymInt_test
+Restrictions: allow-stderr
+
+# C++ test 32/104
+Test-Command: /usr/lib/libtorch-test/c10_Synchronized_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=32_of_104__cpptest__c10_Synchronized_test
+Restrictions: allow-stderr
+
+# C++ test 33/104
+Test-Command: /usr/lib/libtorch-test/c10_ThreadLocal_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=33_of_104__cpptest__c10_ThreadLocal_test
+Restrictions: allow-stderr
+
+# C++ test 34/104
+Test-Command: /usr/lib/libtorch-test/c10_TypeIndex_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=34_of_104__cpptest__c10_TypeIndex_test
+Restrictions: allow-stderr
+
+# C++ test 35/104
+Test-Command: /usr/lib/libtorch-test/c10_TypeList_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=35_of_104__cpptest__c10_TypeList_test
+Restrictions: allow-stderr
+
+# C++ test 36/104
+Test-Command: /usr/lib/libtorch-test/c10_TypeTraits_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=36_of_104__cpptest__c10_TypeTraits_test
+Restrictions: allow-stderr
+
+# C++ test 37/104
+Test-Command: /usr/lib/libtorch-test/c10_accumulate_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=37_of_104__cpptest__c10_accumulate_test
+Restrictions: allow-stderr
+
+# C++ test 38/104
+Test-Command: /usr/lib/libtorch-test/c10_bfloat16_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=38_of_104__cpptest__c10_bfloat16_test
+Restrictions: allow-stderr
+
+# C++ test 39/104
+Test-Command: /usr/lib/libtorch-test/c10_bit_cast_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=39_of_104__cpptest__c10_bit_cast_test
+Restrictions: allow-stderr
+
+# C++ test 40/104
+Test-Command: /usr/lib/libtorch-test/c10_complex_math_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=40_of_104__cpptest__c10_complex_math_test
+Restrictions: allow-stderr
+
+# C++ test 41/104
+Test-Command: /usr/lib/libtorch-test/c10_complex_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=41_of_104__cpptest__c10_complex_test
+Restrictions: allow-stderr
+
+# C++ test 42/104
+Test-Command: /usr/lib/libtorch-test/c10_cow_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=42_of_104__cpptest__c10_cow_test
+Restrictions: allow-stderr
+
+# C++ test 43/104
+Test-Command: /usr/lib/libtorch-test/c10_exception_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=43_of_104__cpptest__c10_exception_test
+Restrictions: allow-stderr
+
+# C++ test 44/104
+Test-Command: /usr/lib/libtorch-test/c10_flags_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=44_of_104__cpptest__c10_flags_test
+Restrictions: allow-stderr
+
+# C++ test 45/104
+Test-Command: /usr/lib/libtorch-test/c10_generic_math_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=45_of_104__cpptest__c10_generic_math_test
+Restrictions: allow-stderr
+
+# C++ test 46/104
+Test-Command: /usr/lib/libtorch-test/c10_intrusive_ptr_benchmark
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=46_of_104__cpptest__c10_intrusive_ptr_benchmark
+Restrictions: allow-stderr
+
+# C++ test 47/104
+Test-Command: /usr/lib/libtorch-test/c10_intrusive_ptr_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=47_of_104__cpptest__c10_intrusive_ptr_test
+Restrictions: allow-stderr
+
+# C++ test 48/104
+Test-Command: /usr/lib/libtorch-test/c10_irange_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=48_of_104__cpptest__c10_irange_test
+Restrictions: allow-stderr
+
+# C++ test 49/104
+Test-Command: /usr/lib/libtorch-test/c10_lazy_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=49_of_104__cpptest__c10_lazy_test
+Restrictions: allow-stderr
+
+# C++ test 50/104
+Test-Command: /usr/lib/libtorch-test/c10_logging_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=50_of_104__cpptest__c10_logging_test
+Restrictions: allow-stderr
+
+# C++ test 51/104
+Test-Command: /usr/lib/libtorch-test/c10_optional_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=51_of_104__cpptest__c10_optional_test
+Restrictions: allow-stderr
+
+# C++ test 52/104
+Test-Command: /usr/lib/libtorch-test/c10_ordered_preserving_dict_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=52_of_104__cpptest__c10_ordered_preserving_dict_test
+Restrictions: allow-stderr
+
+# C++ test 53/104
+Test-Command: /usr/lib/libtorch-test/c10_registry_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=53_of_104__cpptest__c10_registry_test
+Restrictions: allow-stderr
+
+# C++ test 54/104
+Test-Command: /usr/lib/libtorch-test/c10_small_vector_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=54_of_104__cpptest__c10_small_vector_test
+Restrictions: allow-stderr
+
+# C++ test 55/104
+Test-Command: /usr/lib/libtorch-test/c10_ssize_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=55_of_104__cpptest__c10_ssize_test
+Restrictions: allow-stderr
+
+# C++ test 56/104
+Test-Command: /usr/lib/libtorch-test/c10_string_util_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=56_of_104__cpptest__c10_string_util_test
+Restrictions: allow-stderr
+
+# C++ test 57/104
+Test-Command: /usr/lib/libtorch-test/c10_string_view_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=57_of_104__cpptest__c10_string_view_test
+Restrictions: allow-stderr
+
+# C++ test 58/104
+Test-Command: /usr/lib/libtorch-test/c10_tempfile_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=58_of_104__cpptest__c10_tempfile_test
+Restrictions: allow-stderr
+
+# C++ test 59/104
+Test-Command: /usr/lib/libtorch-test/c10_typeid_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=59_of_104__cpptest__c10_typeid_test
+Restrictions: allow-stderr
+
+# C++ test 60/104
+Test-Command: /usr/lib/libtorch-test/cpu_allocator_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=60_of_104__cpptest__cpu_allocator_test
+Restrictions: allow-stderr
+
+# C++ test 61/104
+Test-Command: /usr/lib/libtorch-test/cpu_generator_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=61_of_104__cpptest__cpu_generator_test
+Restrictions: allow-stderr
+
+# C++ test 62/104
+Test-Command: /usr/lib/libtorch-test/cpu_profiling_allocator_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=62_of_104__cpptest__cpu_profiling_allocator_test
+Restrictions: allow-stderr
+
+# C++ test 63/104
+Test-Command: /usr/lib/libtorch-test/cpu_rng_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=63_of_104__cpptest__cpu_rng_test
+Restrictions: allow-stderr
+
+# C++ test 64/104
+Test-Command: /usr/lib/libtorch-test/dispatch_key_set_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=64_of_104__cpptest__dispatch_key_set_test
+Restrictions: allow-stderr
+
+# C++ test 65/104
+Test-Command: /usr/lib/libtorch-test/dlconvertor_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=65_of_104__cpptest__dlconvertor_test
+Restrictions: allow-stderr
+
+# C++ test 66/104
+Test-Command: /usr/lib/libtorch-test/extension_backend_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=66_of_104__cpptest__extension_backend_test
+Restrictions: allow-stderr
+
+# C++ test 67/104
+Test-Command: /usr/lib/libtorch-test/half_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=67_of_104__cpptest__half_test
+Restrictions: allow-stderr
+
+# C++ test 68/104
+Test-Command: /usr/lib/libtorch-test/inline_container_test || true
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=68_of_104__cpptest__inline_container_test
+Restrictions: allow-stderr
+
+# C++ test 69/104
+Test-Command: /usr/lib/libtorch-test/ivalue_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=69_of_104__cpptest__ivalue_test
+Restrictions: allow-stderr
+
+# C++ test 70/104
+Test-Command: /usr/lib/libtorch-test/kernel_function_legacy_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=70_of_104__cpptest__kernel_function_legacy_test
+Restrictions: allow-stderr
+
+# C++ test 71/104
+Test-Command: /usr/lib/libtorch-test/kernel_function_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=71_of_104__cpptest__kernel_function_test
+Restrictions: allow-stderr
+
+# C++ test 72/104
+Test-Command: /usr/lib/libtorch-test/kernel_lambda_legacy_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=72_of_104__cpptest__kernel_lambda_legacy_test
+Restrictions: allow-stderr
+
+# C++ test 73/104
+Test-Command: /usr/lib/libtorch-test/kernel_lambda_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=73_of_104__cpptest__kernel_lambda_test
+Restrictions: allow-stderr
+
+# C++ test 74/104
+Test-Command: /usr/lib/libtorch-test/kernel_stackbased_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=74_of_104__cpptest__kernel_stackbased_test
+Restrictions: allow-stderr
+
+# C++ test 75/104
+Test-Command: /usr/lib/libtorch-test/lazy_tensor_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=75_of_104__cpptest__lazy_tensor_test
+Restrictions: allow-stderr
+
+# C++ test 76/104
+Test-Command: /usr/lib/libtorch-test/legacy_vmap_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=76_of_104__cpptest__legacy_vmap_test
+Restrictions: allow-stderr
+
+# C++ test 77/104
+Test-Command: /usr/lib/libtorch-test/make_boxed_from_unboxed_functor_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=77_of_104__cpptest__make_boxed_from_unboxed_functor_test
+Restrictions: allow-stderr
+
+# C++ test 78/104
+Test-Command: /usr/lib/libtorch-test/math_kernel_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=78_of_104__cpptest__math_kernel_test
+Restrictions: allow-stderr
+
+# C++ test 79/104
+Test-Command: /usr/lib/libtorch-test/memory_format_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=79_of_104__cpptest__memory_format_test
+Restrictions: allow-stderr
+
+# C++ test 80/104
+Test-Command: /usr/lib/libtorch-test/memory_overlapping_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=80_of_104__cpptest__memory_overlapping_test
+Restrictions: allow-stderr
+
+# C++ test 81/104
+Test-Command: /usr/lib/libtorch-test/mobile_memory_cleanup
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=81_of_104__cpptest__mobile_memory_cleanup
+Restrictions: allow-stderr
+
+# C++ test 82/104
+Test-Command: /usr/lib/libtorch-test/native_test || true
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=82_of_104__cpptest__native_test
+Restrictions: allow-stderr
+
+# C++ test 83/104
+Test-Command: /usr/lib/libtorch-test/op_allowlist_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=83_of_104__cpptest__op_allowlist_test
+Restrictions: allow-stderr
+
+# C++ test 84/104
+Test-Command: /usr/lib/libtorch-test/op_registration_test || true
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=84_of_104__cpptest__op_registration_test
+Restrictions: allow-stderr
+
+# C++ test 85/104
+Test-Command: /usr/lib/libtorch-test/operator_name_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=85_of_104__cpptest__operator_name_test
+Restrictions: allow-stderr
+
+# C++ test 86/104
+Test-Command: /usr/lib/libtorch-test/operators_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=86_of_104__cpptest__operators_test
+Restrictions: allow-stderr
+
+# C++ test 87/104
+Test-Command: /usr/lib/libtorch-test/packedtensoraccessor_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=87_of_104__cpptest__packedtensoraccessor_test
+Restrictions: allow-stderr
+
+# C++ test 88/104
+Test-Command: /usr/lib/libtorch-test/pow_test || true
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=88_of_104__cpptest__pow_test
+Restrictions: allow-stderr
+
+# C++ test 89/104
+Test-Command: /usr/lib/libtorch-test/quantized_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=89_of_104__cpptest__quantized_test
+Restrictions: allow-stderr
+
+# C++ test 90/104
+Test-Command: /usr/lib/libtorch-test/reduce_ops_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=90_of_104__cpptest__reduce_ops_test
+Restrictions: allow-stderr
+
+# C++ test 91/104
+Test-Command: /usr/lib/libtorch-test/reportMemoryUsage_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=91_of_104__cpptest__reportMemoryUsage_test
+Restrictions: allow-stderr
+
+# C++ test 92/104
+Test-Command: /usr/lib/libtorch-test/scalar_tensor_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=92_of_104__cpptest__scalar_tensor_test
+Restrictions: allow-stderr
+
+# C++ test 93/104
+Test-Command: /usr/lib/libtorch-test/scalar_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=93_of_104__cpptest__scalar_test
+Restrictions: allow-stderr
+
+# C++ test 94/104
+Test-Command: /usr/lib/libtorch-test/stride_properties_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=94_of_104__cpptest__stride_properties_test
+Restrictions: allow-stderr
+
+# C++ test 95/104
+Test-Command: /usr/lib/libtorch-test/tensor_iterator_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=95_of_104__cpptest__tensor_iterator_test
+Restrictions: allow-stderr
+
+# C++ test 96/104
+Test-Command: /usr/lib/libtorch-test/test_parallel
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=96_of_104__cpptest__test_parallel
+Restrictions: allow-stderr
+
+# C++ test 97/104
+Test-Command: /usr/lib/libtorch-test/thread_init_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=97_of_104__cpptest__thread_init_test
+Restrictions: allow-stderr
+
+# C++ test 98/104
+Test-Command: /usr/lib/libtorch-test/type_ptr_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=98_of_104__cpptest__type_ptr_test
+Restrictions: allow-stderr
+
+# C++ test 99/104
+Test-Command: /usr/lib/libtorch-test/type_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=99_of_104__cpptest__type_test
+Restrictions: allow-stderr
+
+# C++ test 100/104
+Test-Command: /usr/lib/libtorch-test/undefined_tensor_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=100_of_104__cpptest__undefined_tensor_test
+Restrictions: allow-stderr
+
+# C++ test 101/104
+Test-Command: /usr/lib/libtorch-test/verify_api_visibility
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=101_of_104__cpptest__verify_api_visibility
+Restrictions: allow-stderr
+
+# C++ test 102/104
+Test-Command: /usr/lib/libtorch-test/weakref_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=102_of_104__cpptest__weakref_test
+Restrictions: allow-stderr
+
+# C++ test 103/104
+Test-Command: /usr/lib/libtorch-test/wrapdim_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=103_of_104__cpptest__wrapdim_test
+Restrictions: allow-stderr
+
+# C++ test 104/104
+Test-Command: /usr/lib/libtorch-test/xla_tensor_test
+Depends: build-essential, ninja-build, libtorch-dev, libtorch-test
+Features: test-name=104_of_104__cpptest__xla_tensor_test
+Restrictions: allow-stderr
+

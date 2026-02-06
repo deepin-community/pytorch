@@ -1,0 +1,41 @@
+# Sanity test of python package
+Test-Command: cd test/ ; python3 -c "import sys, torch as th; print(sys.version, th.__path__, th.__version__)"
+Depends: python3-torch,
+Restrictions: allow-stderr
+Features: test-name=py_import_and_version
+
+Test-Command: cd debian/tests ; python3 blas.py
+Depends: python3-torch, libopenblas0
+Restrictions: allow-stderr
+Features: test-name=py_blas_openblas
+
+Test-Command: cd debian/tests ; python3 blas.py
+Depends: python3-torch, libblis4
+Restrictions: allow-stderr
+Features: test-name=py_blas_blis
+
+Test-Command: cd debian/tests ; python3 sequential.py
+Depends: python3-torch,
+Restrictions: allow-stderr
+Features: test-name=py_sequential
+
+# Check dangling symbol links
+#Test-Command: cd debian/tests ; export TH_PATH="$(python3 -c 'import torch; print(torch.__path__[0])')"; test -z "$(find ${TH_PATH}/lib -xtype l)"
+#Depends: python3-torch,
+#Restrictions: allow-stderr
+#Features: test-name=py_torch_no_dangling_symlink
+
+# We are only printing those for package maintainers. The find command may fail due to a dangling symlink from other packages.
+Test-Command: cd debian/tests ; find /usr -xtype l -print || true
+Depends: @
+Restrictions: allow-stderr
+Features: test-name=show_dangling_symlink_if_any
+
+# Real functionality test
+# We exclude s390x because the training data bytes are little-endian.
+Test-Command: sh debian/tests/train-mnist.sh
+Depends: @, python3-torchvision, dataset-fashion-mnist, libopenblas0
+Restrictions: allow-stderr
+Features: test-name=real_train_mnist
+Architecture: !s390x
+

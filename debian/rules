@@ -1,4 +1,475 @@
 #!/usr/bin/make -f
+include /usr/share/dpkg/pkg-info.mk
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export LC_ALL=C.UTF-8
+export PYBUILD_DISABLE_python2 = 1
+export PYBUILD_NAME = torch
+export PYTORCH_BUILD_VERSION = $(subst +dfsg,,$(DEB_VERSION_UPSTREAM))
+export PYTORCH_VERSION = $(subst +dfsg,,$(DEB_VERSION_UPSTREAM))
+export SOVERSION = 2.6
+export PATCH = 0
+
+include /usr/share/dpkg/buildflags.mk
+ORIG_CFLAGS := $(CFLAGS)
+ORIG_CPPFLAGS := $(CPPFLAGS)
+ORIG_CXXFLAGS := $(CXXFLAGS)
+
+# --[[ maintainer notes ]]--
+# How to dump the flags for the upstream built instance:
+# $ python3 -c 'import torch as th; print(th.__version__, th.__config__.show())'
+
+# [special blas configurations]
+# We use a run-time switching mechanism for BLAS/LAPACK.
+# https://wiki.debian.org/DebianScience/LinearAlgebraLibraries
+# Even if the torch package is built against the generic library, the backend
+# libblas.so.3 is in fact automatically switched to the fastest implementation.
+export BLAS = Generic
+export GENERIC_BLAS_LIBRARIES = blas
+
+# [misc configurations]
+export _WNOERROR_ = -Wno-dangling-reference
+ifneq (,$(shell command -v mold))
+export LD=mold
+export __LD=-fuse-ld=mold
+else
+ifneq (,$(shell command -v lld))
+export LD=lld
+export __LD=-fuse-ld=lld
+else
+export LD=ld
+export __LD=
+endif
+endif
+export CFLAGS := $(ORIG_CPPFLAGS) \
+					$(ORIG_CFLAGS) \
+					-gsplit-dwarf $(_WNOERROR_) $(__LD) -I/usr
+export CXXFLAGS := $(ORIG_CPPFLAGS) \
+					$(ORIG_CXXFLAGS) \
+					-gsplit-dwarf $(_WNOERROR_) $(__LD) -I/usr
+export ONNX_NAMESPACE = onnx
+export REL_WITH_DEB_INFO = ON
+export USE_GFLAGS= OFF
+export USE_GLOG = OFF
+export USE_SYSTEM_LIBS = ON
+export USE_KINETO = ON
+export USE_ITT = OFF
+export USE_LLVM := $(shell llvm-config-19 --prefix)
+
+# [device specific -- Vulkan backend support]
+# See https://pytorch.org/tutorials/prototype/vulkan_workflow.html
+export USE_VULKAN=1
+
+# [device specific -- CPU/CUDA/ROCm configurations]
+ifneq (,$(shell command -v nvcc))
+# -- CUDA version
+export CUDA_HOME=/usr
+export CC=cuda-gcc
+export CXX=cuda-g++
+export BUILD_SPLIT_CUDA=ON  # this is a workaround to linker overflow
+# Refer the following webpage for CUDA capacity of different GPUs:
+#   https://developer.nvidia.com/cuda-gpus
+# Note, cuda compute architecture is backward compatible. Namely the code
+# compiled for 8.6 (e.g., RTX3090) can run on a device with 8.9 (e.g., RTX4090)
+# capability. See the following documentation for more on compatibility:
+#   https://docs.nvidia.com/cuda/hopper-compatibility-guide/index.html
+# The following is the PyTorch upstream's CUDA device compatibility list,
+# based on their binary pypi wheels.
+# In [1]: import torch
+# In [3]: torch.cuda.get_arch_list()
+# Out[3]: ['sm_50', 'sm_60', 'sm_70', 'sm_75', 'sm_80', 'sm_86', 'sm_90']
+export TORCH_CUDA_ARCH_LIST = 5.0;6.0;7.0;7.5;8.0;8.6;9.0+PTX
+export NO_CUDA = 0
+export USE_CUDA = ON
+export USE_CUDNN = ON
+export USE_SYSTEM_NCCL = ON
+export USE_ROCM = OFF
+export USE_MIOPEN = OFF
+export USE_MAGMA = OFF
+else ifneq (,$(shell command -v hipcc))
+# ROCm version
+export NO_CUDA = 1
+export USE_CUDA = 0
+export USE_ROCM = 1
+export USE_MIOPEN = 1
+export ROCM_PATH = /usr
+export PYTORCH_ROCM_ARCH = gfx1100
+else
+# CPU version
+export NO_CUDA = 1
+export USE_CUDA = OFF
+export USE_CUDNN = OFF
+export USE_SYSTEM_NCCL = OFF
+export USE_ROCM = OFF
+export USE_MIOPEN = OFF
+export DEB_OVERRIDE_CAFFE2_PY_PATH=$(CURDIR)/debian/python3-torch/
+endif
+
+# [distributed/communication configurations]
+export USE_DISTRIBUTED = ON
+# gloo: for cuda version we need gloo-cuda, for cpu version we use gloo
+export USE_GLOO = ON
+# mpi: for cpu version are are good. for cuda version we need cuda-aware
+#	  mpi which is not present in the archive.
+ifneq (,$(shell command -v nvcc))
+export USE_MPI = OFF
+else
+export USE_MPI = ON
+endif
+# tensorpipe: this has been deprecated and archived by upstream.
+#   but disabling it will cause issues.
+#   https://github.com/pytorch/pytorch/issues/97397 
+export USE_TENSORPIPE = ON
+
+# [CPU training and inference]
+export USE_FBGEMM = OFF  # XXX: forget this; No need to enable.
+# onednn: intel's backend
+ifneq (,$(filter $(DEB_HOST_ARCH),amd64 arm64 ppc64el))
+export USE_MKLDNN = ON  # requires ideep and onednn.
+else
+export USE_MKLDNN = OFF
+endif
+# embedded qnnpack: pytorch's embedded qnnpack implementation
+# see: aten/src/ATen/native/quantized/cpu/qnnpack/
+ifneq (,$(filter $(DEB_HOST_ARCH),amd64))
+export USE_PYTORCH_QNNPACK = ON
+else
+export USE_PYTORCH_QNNPACK = OFF
+endif
+# nnpack: inactivate upstream. for mobile. forget this. no need to enable.
+#		 https://github.com/pytorch/pytorch/commit/53c640a5283c82cdd37cd29e7975627d02d094ec#diff-0ddbdb4f5ddba44d9e863e08c31c15f32cf2868e9e0341529cd2697c2ccb25c5L109
+export USE_NNPACK = OFF
+# xnnpack: active upstream, but only available for selected architectures.
+ifneq (,$(filter $(DEB_HOST_ARCH),amd64 arm64 riscv64))
+export USE_XNNPACK = ON
+else
+export USE_XNNPACK = OFF
+endif
+
+# [number of jobs]
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+export MAX_JOBS := $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+endif
+
+# Customization options (You may want to rebuild this package locally)
+NATIVE :=
+ifneq (,$(NATIVE))
+export CFLAGS := $(ORIG_CPPFLAGS) $(ORIG_CFLAGS) -gsplit-dwarf -march=native
+export CXXFLAGS := $(ORIG_CPPFLAGS) $(ORIG_CXXFLAGS) -gsplit-dwarf -march=native
+endif
+
 
 %:
-	dh $@
+	dh $@ -Spybuild --with python3
+
+debian/libtorch$(SOVERSION).shlibs:
+	sed debian/libtorch$(SOVERSION).shlibs.in \
+		-e "s/@SOVERSION@/$(SOVERSION)/g" \
+		-e "s/@DEB_VERSION_UPSTREAM@/$(DEB_VERSION_UPSTREAM)/g" \
+		> $@
+	cp -v $@ debian/libtorch-cuda-$(SOVERSION).shlibs
+	cp -v $@ debian/libtorch-rocm-$(SOVERSION).shlibs
+
+override_dh_auto_configure: debian/libtorch$(SOVERSION).shlibs
+	cd third_party/ && rmdir googletest || cp -rv /usr/src/googletest .
+	# fix python and shell shebang -- no /usr/bin/env
+	find . -type f -name '*.py' -exec sed -i -e 's@#!/usr/bin/env python.*@#!/usr/bin/python3@' '{}' \;
+	find . -type f -name '*.sh' -exec sed -i -e 's@#!/usr/bin/env @#!/usr/bin/@g' '{}' \;
+	# regenerate flatbuffers code. See tools/gen_flatbuffers.sh
+	cd torch/csrc/jit/serialization/ && flatc --cpp --gen-mutable --scoped-enums mobile_bytecode.fbs 
+
+override_dh_auto_build:
+	true # In order to avoid building everything twice.
+
+override_dh_auto_test:
+	true
+
+# [maintainer note] The build results in many shared objects ...
+# but not all of them are important. You may check the contents of the
+# upstream release of libtorch binary tarball in https://pytorch.org/
+# for the list of most important shared objects.
+# Alternatively, you may browse the conda-meta/pytorch-*.json files
+# under an anaconda instance.
+# [maintainer note on python version]
+# This package is built for a single version (default python3) only.
+# Extending to multiple python3 versions is not easy because
+# libtorch_python.so is coupled with a single python version.
+override_dh_auto_install:
+	# [build and install]
+ifneq (,$(shell command -v nvcc))
+	# --- CUDA variant
+	for PY in $(shell py3versions -d); do\
+		$$PY setup.py install --install-layout=deb \
+		--root=$(CURDIR)/debian/python3-torch-cuda/ ;\
+		done
+else ifneq (,$(shell command -v hipcc))
+	# --- ROCM variant
+	for PY in $(shell py3versions -d); do\
+		$$PY setup.py install --install-layout=deb \
+		--root=$(CURDIR)/debian/python3-torch-rocm/ ;\
+		done
+else
+	# --- CPU variant
+	for PY in $(shell py3versions -d); do \
+		$$PY setup.py install --install-layout=deb \
+		--root=$(CURDIR)/debian/python3-torch/ ;\
+		done
+endif
+	# [list shared objects] use `ls build/lib/*.so` to get a list of all compiled shared objects.
+	echo {begin listing shared objects}
+	find build/lib -type f | sort
+	echo {end listing shared objects}
+	# [python3-torch::headers -> libtorch-dev] move the headers out of the python package
+ifneq (,$(shell command -v nvcc))
+	# --- CUDA variant
+	mkdir -pv debian/libtorch-cuda-dev/usr/include
+	mv -v debian/python3-torch-cuda/usr/lib/python3*/dist-packages/torch/include/* \
+		debian/libtorch-cuda-dev/usr/include/
+	cd debian/python3-torch-cuda/usr/lib/python3*/dist-packages/torch/include/ && \
+		ln -sv /usr/include/ATen . &&\
+		ln -sv /usr/include/c10 . &&\
+		ln -sv /usr/include/caffe2 . &&\
+		ln -sv /usr/include/torch . &&\
+		true
+else ifneq (,$(shell command -v hipcc))
+	# --- ROCM variant
+	mkdir -pv debian/libtorch-rocm-dev/usr/include
+	mv -v debian/python3-torch-rocm/usr/lib/python3*/dist-packages/torch/include/* \
+		debian/libtorch-rocm-dev/usr/include/
+	cd debian/python3-torch-rocm/usr/lib/python3*/dist-packages/torch/include/ && \
+		ln -sv /usr/include/ATen . &&\
+		ln -sv /usr/include/c10 . &&\
+		ln -sv /usr/include/caffe2 . &&\
+		ln -sv /usr/include/torch . &&\
+		true
+else
+	# --- CPU variant
+	mkdir -pv debian/libtorch-dev/usr/include
+	mv -v debian/python3-torch/usr/lib/python3*/dist-packages/torch/include/* \
+		debian/libtorch-dev/usr/include/
+	cd debian/python3-torch/usr/lib/python3*/dist-packages/torch/include/ && \
+		ln -sv /usr/include/ATen . &&\
+		ln -sv /usr/include/c10 . &&\
+		ln -sv /usr/include/caffe2 . &&\
+		ln -sv /usr/include/torch . &&\
+		true
+endif
+	# [python3-torch::shlibs -> libtorch$(SOVERSION)] move the (public) shared libs out of the python package
+	# --- we first delete the unwanted libraries
+	-find debian -name 'libnnapi_backend.so*' -delete
+	-find debian -name 'libbackend_with_compiler.so*' -delete
+	-find debian -name 'libtorchbind_test.so*' -delete
+	-find debian -name 'libjitbackend_test.so*' -delete
+	-find debian -name 'libc10d_cuda_test.so*' -delete
+	#     the test_jit binary pulls libbackend_with_compilder.so and libjitbackend_test.so
+	-find debian -name 'test_jit' -executable -delete
+	#     the following test binaries pull libc10d_cuda_test.so
+	-find debian -name 'ProcessGroupNCCLErrorsTest' -executable -delete
+	-find debian -name 'ProcessGroupGlooAsyncTest' -executable -delete
+	-find debian -name 'ProcessGroupNCCLTest' -executable -delete
+	-find debian -name 'ProcessGroupGlooTest' -executable -delete
+ifneq (,$(shell command -v nvcc))
+	# --- CUDA variant
+	mkdir -pv debian/libtorch-cuda-$(SOVERSION)/usr/lib/$(DEB_HOST_MULTIARCH)/
+	mv -v debian/python3-torch-cuda/usr/lib/python3*/dist-packages/torch/lib/*.so.* \
+		debian/libtorch-cuda-$(SOVERSION)/usr/lib/$(DEB_HOST_MULTIARCH)/
+	cd debian/libtorch-cuda-$(SOVERSION)/usr/lib/$(DEB_HOST_MULTIARCH)/ &&\
+		ln -sfv libc10.so.$(SOVERSION).$(PATCH) libc10.so.$(SOVERSION) &&\
+		ln -sfv libc10_cuda.so.$(SOVERSION).$(PATCH) libc10_cuda.so.$(SOVERSION) &&\
+		ln -sfv libcaffe2_nvrtc.so.$(SOVERSION).$(PATCH) libcaffe2_nvrtc.so.$(SOVERSION) &&\
+		ln -sfv libshm.so.$(SOVERSION).$(PATCH) libshm.so.$(SOVERSION) &&\
+		ln -sfv libtorch.so.$(SOVERSION).$(PATCH) libtorch.so.$(SOVERSION) &&\
+		ln -sfv libtorch_cpu.so.$(SOVERSION).$(PATCH) libtorch_cpu.so.$(SOVERSION) &&\
+		ln -sfv libtorch_cuda.so.$(SOVERSION).$(PATCH) libtorch_cuda.so.$(SOVERSION) &&\
+		ln -sfv libtorch_cuda_linalg.so.$(SOVERSION).$(PATCH) libtorch_cuda_linalg.so.$(SOVERSION) &&\
+		ln -sfv libtorch_global_deps.so.$(SOVERSION).$(PATCH) libtorch_global_deps.so.$(SOVERSION) &&\
+		ln -sfv libtorch_python.so.$(SOVERSION).$(PATCH) libtorch_python.so.$(SOVERSION) &&\
+		true
+else ifneq (,$(shell command -v hipcc))
+	# --- ROCM variant
+	mkdir -pv debian/libtorch-rocm-$(SOVERSION)/usr/lib/$(DEB_HOST_MULTIARCH)/
+	mv -v debian/python3-torch-rocm/usr/lib/python3*/dist-packages/torch/lib/*.so.* \
+		debian/libtorch-rocm-$(SOVERSION)/usr/lib/$(DEB_HOST_MULTIARCH)/
+	cd debian/libtorch-rocm-$(SOVERSION)/usr/lib/$(DEB_HOST_MULTIARCH)/ &&\
+		ln -sfv libc10.so.$(SOVERSION).$(PATCH) libc10.so.$(SOVERSION) &&\
+		ln -sfv libshm.so.$(SOVERSION).$(PATCH) libshm.so.$(SOVERSION) &&\
+		ln -sfv libtorch.so.$(SOVERSION).$(PATCH) libtorch.so.$(SOVERSION) &&\
+		ln -sfv libtorch_cpu.so.$(SOVERSION).$(PATCH) libtorch_cpu.so.$(SOVERSION) &&\
+		ln -sfv libtorch_global_deps.so.$(SOVERSION).$(PATCH) libtorch_global_deps.so.$(SOVERSION) &&\
+		ln -sfv libtorch_python.so.$(SOVERSION).$(PATCH) libtorch_python.so.$(SOVERSION) &&\
+		true
+else
+	# --- CPU variant
+	mkdir -pv debian/libtorch$(SOVERSION)/usr/lib/$(DEB_HOST_MULTIARCH)/
+	mv -v debian/python3-torch/usr/lib/python3*/dist-packages/torch/lib/*.so.* \
+		debian/libtorch$(SOVERSION)/usr/lib/$(DEB_HOST_MULTIARCH)/
+	cd debian/libtorch$(SOVERSION)/usr/lib/$(DEB_HOST_MULTIARCH)/&& \
+		ln -sfv libc10.so.$(SOVERSION).$(PATCH) libc10.so.$(SOVERSION) &&\
+		ln -sfv libshm.so.$(SOVERSION).$(PATCH) libshm.so.$(SOVERSION) &&\
+		ln -sfv libtorch.so.$(SOVERSION).$(PATCH) libtorch.so.$(SOVERSION) &&\
+		ln -sfv libtorch_cpu.so.$(SOVERSION).$(PATCH) libtorch_cpu.so.$(SOVERSION) &&\
+		ln -sfv libtorch_global_deps.so.$(SOVERSION).$(PATCH) libtorch_global_deps.so.$(SOVERSION) &&\
+		ln -sfv libtorch_python.so.$(SOVERSION).$(PATCH) libtorch_python.so.$(SOVERSION) &&\
+		true
+endif
+	# [python3-torch::symlinks -> libtorch-dev] move the links to shared libs out of the python package
+ifneq (,$(shell command -v nvcc))
+	# --- CUDA variant
+	mkdir -pv debian/libtorch-cuda-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
+	cd debian/python3-torch-cuda/usr/lib/python3*/dist-packages/torch/lib && $(RM) -v *.so&&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libc10.so.$(SOVERSION) libc10.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libc10_cuda.so.$(SOVERSION) libc10_cuda.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libcaffe2_nvrtc.so.$(SOVERSION) libcaffe2_nvrtc.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libshm.so.$(SOVERSION) libshm.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch.so.$(SOVERSION) libtorch.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch_cpu.so.$(SOVERSION) libtorch_cpu.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch_cuda_linalg.so.$(SOVERSION) libtorch_cuda_linalg.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch_global_deps.so.$(SOVERSION) libtorch_global_deps.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch_python.so.$(SOVERSION) libtorch_python.so &&\
+		true
+	cd debian/libtorch-cuda-dev/usr/lib/$(DEB_HOST_MULTIARCH)/&& \
+		ln -sfv libc10.so.$(SOVERSION) libc10.so &&\
+		ln -sfv libc10_cuda.so.$(SOVERSION) libc10_cuda.so &&\
+		ln -sfv libcaffe2_nvrtc.so.$(SOVERSION) libcaffe2_nvrtc.so &&\
+		ln -sfv libshm.so.$(SOVERSION) libshm.so &&\
+		ln -sfv libtorch.so.$(SOVERSION) libtorch.so &&\
+		ln -sfv libtorch_cpu.so.$(SOVERSION) libtorch_cpu.so &&\
+		ln -sfv libtorch_cuda.so.$(SOVERSION) libtorch_cuda.so &&\
+		ln -sfv libtorch_cuda_linalg.so.$(SOVERSION) libtorch_cuda_linalg.so &&\
+		ln -sfv libtorch_global_deps.so.$(SOVERSION) libtorch_global_deps.so &&\
+		ln -sfv libtorch_python.so.$(SOVERSION) libtorch_python.so &&\
+		true
+else ifneq (,$(shell command -v hipcc))
+	# --- ROCM variant
+	mkdir -pv debian/libtorch-rocm-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
+	cd debian/python3-torch-rocm/usr/lib/python3*/dist-packages/torch/lib && $(RM) -v *.so&&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libc10.so.$(SOVERSION) libc10.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libshm.so.$(SOVERSION) libshm.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch.so.$(SOVERSION) libtorch.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch_cpu.so.$(SOVERSION) libtorch_cpu.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch_global_deps.so.$(SOVERSION) libtorch_global_deps.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch_python.so.$(SOVERSION) libtorch_python.so &&\
+		true
+	cd debian/libtorch-rocm-dev/usr/lib/$(DEB_HOST_MULTIARCH)/&& \
+		ln -sfv libc10.so.$(SOVERSION) libc10.so &&\
+		ln -sfv libshm.so.$(SOVERSION) libshm.so &&\
+		ln -sfv libtorch.so.$(SOVERSION) libtorch.so &&\
+		ln -sfv libtorch_cpu.so.$(SOVERSION) libtorch_cpu.so &&\
+		ln -sfv libtorch_global_deps.so.$(SOVERSION) libtorch_global_deps.so &&\
+		ln -sfv libtorch_python.so.$(SOVERSION) libtorch_python.so &&\
+		true
+else
+	# --- CPU variant
+	mkdir -pv debian/libtorch-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
+	cd debian/python3-torch/usr/lib/python3*/dist-packages/torch/lib && $(RM) -v *.so&&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libc10.so.$(SOVERSION) libc10.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libshm.so.$(SOVERSION) libshm.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch.so.$(SOVERSION) libtorch.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch_cpu.so.$(SOVERSION) libtorch_cpu.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch_global_deps.so.$(SOVERSION) libtorch_global_deps.so &&\
+		ln -sv  ../../../../$(DEB_HOST_MULTIARCH)/libtorch_python.so.$(SOVERSION) libtorch_python.so &&\
+		true
+	cd debian/libtorch-dev/usr/lib/$(DEB_HOST_MULTIARCH)/&& \
+		ln -sfv libc10.so.$(SOVERSION) libc10.so &&\
+		ln -sfv libshm.so.$(SOVERSION) libshm.so &&\
+		ln -sfv libtorch.so.$(SOVERSION) libtorch.so &&\
+		ln -sfv libtorch_cpu.so.$(SOVERSION) libtorch_cpu.so &&\
+		ln -sfv libtorch_global_deps.so.$(SOVERSION) libtorch_global_deps.so &&\
+		ln -sfv libtorch_python.so.$(SOVERSION) libtorch_python.so &&\
+		true
+endif
+	# [python3-torch::cmake -> libtorch-dev] move the cmake files out of the python package, and fixup the cmake files accordingly
+ifneq (,$(shell command -v nvcc))
+	mkdir -pv debian/libtorch-cuda-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
+	mv -v debian/python3-torch-cuda/usr/lib/python3*/dist-packages/torch/share/cmake \
+		debian/libtorch-cuda-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
+	find debian/libtorch-cuda-dev/usr/lib/$(DEB_HOST_MULTIARCH) -type f -name '*.cmake' \
+		-exec sed -i -e "s@\\(_IMPORT_PREFIX.\\)/lib/lib@\\1/$(DEB_HOST_MULTIARCH)/lib@g" '{}' \;
+	find debian/libtorch-cuda-dev/usr/lib/$(DEB_HOST_MULTIARCH) -type f -name '*.cmake' \
+		-exec sed -i -e "s@\\(_IMPORT_PREFIX.\\)/include@\\1/../include@g" '{}' \;
+	find debian/libtorch-cuda-dev/usr/lib/$(DEB_HOST_MULTIARCH) -type f -name '*.cmake' \
+			-exec sed -i -e "s@\\(CMAKE_CURRENT_LIST_DIR.\\)/../../../@\\1/../../../../@g" '{}' \;
+	find debian/libtorch-cuda-dev/usr/lib/$(DEB_HOST_MULTIARCH)/cmake/ATen -type f -name '*.cmake' \
+		-exec sed -i -e "s@/build/pytorch-.*/torch/include@/usr/include/ATen@g" '{}' \;
+else ifneq (,$(shell command -v hipcc))
+	mkdir -pv debian/libtorch-rocm-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
+	mv -v debian/python3-torch-rocm/usr/lib/python3*/dist-packages/torch/share/cmake \
+		debian/libtorch-rocm-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
+	find debian/libtorch-rocm-dev/usr/lib/$(DEB_HOST_MULTIARCH) -type f -name '*.cmake' \
+		-exec sed -i -e "s@\\(_IMPORT_PREFIX.\\)/lib/lib@\\1/$(DEB_HOST_MULTIARCH)/lib@g" '{}' \;
+	find debian/libtorch-rocm-dev/usr/lib/$(DEB_HOST_MULTIARCH) -type f -name '*.cmake' \
+		-exec sed -i -e "s@\\(_IMPORT_PREFIX.\\)/include@\\1/../include@g" '{}' \;
+	find debian/libtorch-rocm-dev/usr/lib/$(DEB_HOST_MULTIARCH) -type f -name '*.cmake' \
+			-exec sed -i -e "s@\\(CMAKE_CURRENT_LIST_DIR.\\)/../../../@\\1/../../../../@g" '{}' \;
+	find debian/libtorch-rocm-dev/usr/lib/$(DEB_HOST_MULTIARCH)/cmake/ATen -type f -name '*.cmake' \
+		-exec sed -i -e "s@/build/pytorch-.*/torch/include@/usr/include/ATen@g" '{}' \;
+else
+	mkdir -pv debian/libtorch-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
+	mv -v debian/python3-torch/usr/lib/python3*/dist-packages/torch/share/cmake \
+		debian/libtorch-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
+	find debian/libtorch-dev/usr/lib/$(DEB_HOST_MULTIARCH) -type f -name '*.cmake' \
+		-exec sed -i -e "s@\\(_IMPORT_PREFIX.\\)/lib/lib@\\1/$(DEB_HOST_MULTIARCH)/lib@g" '{}' \;
+	find debian/libtorch-dev/usr/lib/$(DEB_HOST_MULTIARCH) -type f -name '*.cmake' \
+		-exec sed -i -e "s@\\(_IMPORT_PREFIX.\\)/include@\\1/../include@g" '{}' \;
+	find debian/libtorch-dev/usr/lib/$(DEB_HOST_MULTIARCH) -type f -name '*.cmake' \
+			-exec sed -i -e "s@\\(CMAKE_CURRENT_LIST_DIR.\\)/../../../@\\1/../../../../@g" '{}' \;
+	find debian/libtorch-dev/usr/lib/$(DEB_HOST_MULTIARCH)/cmake/ATen -type f -name '*.cmake' \
+		-exec sed -i -e "s@/build/pytorch-.*/torch/include@/usr/include/ATen@g" '{}' \;
+endif
+	# [python3-torch::testbin -> libtorch-test] move the test binaries out of the python packaage
+ifneq (,$(shell command -v nvcc))
+	mkdir -pv debian/libtorch-cuda-test/usr/lib/libtorch-cuda-test/
+	mv -v debian/python3-torch-cuda/usr/lib/python3*/dist-packages/torch/test/* \
+		debian/libtorch-cuda-test/usr/lib/libtorch-cuda-test/
+	rmdir -v debian/python3-torch-cuda/usr/lib/python3*/dist-packages/torch/test
+	cd debian/python3-torch-cuda/usr/lib/python3*/dist-packages/torch/ &&\
+		ln -s /usr/lib/libtorch-cuda-test test
+else ifneq (,$(shell command -v hipcc))
+	mkdir -pv debian/libtorch-rocm-test/usr/lib/libtorch-test/
+	mv -v debian/python3-torch-rocm/usr/lib/python3*/dist-packages/torch/test/* \
+		debian/libtorch-rocm-test/usr/lib/libtorch-test/
+	rmdir -v debian/python3-torch-rocm/usr/lib/python3*/dist-packages/torch/test
+	cd debian/python3-torch-rocm/usr/lib/python3*/dist-packages/torch/ &&\
+		ln -s /usr/lib/libtorch-rocm-test test
+else
+	mkdir -pv debian/libtorch-test/usr/lib/libtorch-test/
+	mv -v debian/python3-torch/usr/lib/python3*/dist-packages/torch/test/* \
+		debian/libtorch-test/usr/lib/libtorch-test/
+	rmdir -v debian/python3-torch/usr/lib/python3*/dist-packages/torch/test
+	cd debian/python3-torch/usr/lib/python3*/dist-packages/torch/ &&\
+		ln -s /usr/lib/libtorch-test test
+endif
+	# [python3-torch :: Debhelper Sequence files]
+#ifneq (,$(shell command -v nvcc))
+#	mkdir -pv debian/python3-torch-cuda/usr/share/perl5/Debian/Debhelper/Sequence
+#	cp debian/pytorch.pm \
+#		debian/python3-torch-cuda/usr/share/perl5/Debian/Debhelper/Sequence/
+#	mkdir -pv debian/python3-torch-cuda/usr/bin
+#	cp debian/dh_pytorch \
+#		debian/python3-torch-cuda/usr/bin/
+#else ifneq (,$(shell command -v hipcc))
+#	false
+#else
+#	mkdir -pv debian/python3-torch/usr/share/perl5/Debian/Debhelper/Sequence
+#	cp debian/pytorch.pm \
+#		debian/python3-torch/usr/share/perl5/Debian/Debhelper/Sequence/
+#	mkdir -pv debian/python3-torch/usr/bin
+#	cp debian/dh_pytorch \
+#		debian/python3-torch/usr/bin/
+#endif
+	# [ deal with RPATH ]
+	-patchelf --remove-rpath debian/libtorch$(SOVERSION)/usr/lib/$(DEB_HOST_MULTIARCH)/libtorch_cpu.so.$(SOVERSION).$(PATCH)
+	-patchelf --remove-rpath debian/libtorch$(SOVERSION)/usr/lib/$(DEB_HOST_MULTIARCH)/libtorch_global_deps.so.$(SOVERSION).$(PATCH)
+	-patchelf --remove-rpath debian/libtorch$(SOVERSION)/usr/lib/$(DEB_HOST_MULTIARCH)/libtorch_python.so.$(SOVERSION).$(PATCH)
+	-patchelf --remove-rpath debian/python3-torch/usr/lib/python3/dist-packages/torch/bin/ProcessGroupMPITest
+
+override_dh_python3:
+	dh_python3 --requires=requirements.txt --no-ext-rename
+	dh_numpy3
+
+override_dh_auto_clean:
+	-$(RM) -r build/
+	-$(RM) -f third_party/googletest
+	-$(RM) debian/*.shlibs
+
+override_dh_dwz:
+	: # FTBFS

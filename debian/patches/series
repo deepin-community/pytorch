@@ -1,0 +1,15 @@
+1020-dirtyhack.patch
+1030-use-system-dnnl.patch
+1040-cmake-strip-3rdparty.patch
+1050-use-system-httplib.patch
+1060-remove-pkg-resources.patch
+2000-version.patch
+2050-pytorch_glog_update.patch
+2060-fix-wrong-shebang.patch
+2080-fix-aten-config-cmake-path.patch
+2100-remove-opentelemetry.patch
+2101-fix-ftbfs-ld-sleef.patch
+2200-remove-astunparse-dep.patch
+2210-disable-fno-math-errno-on-arm64-to-workaround-gcc14-bug.patch
+2220-disable-sve-on-arm64.patch
+2300-torch-cuda-no-use-nvtx3.patch

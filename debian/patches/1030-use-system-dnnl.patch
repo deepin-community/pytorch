@@ -1,0 +1,62 @@
+Description: Enable DNNL/ideep integration
+Author: Mo Zhou
+Forwarded: not-needed
+Last-update: 2023-09-30
+
+---
+
+--- a/cmake/public/mkldnn.cmake
++++ b/cmake/public/mkldnn.cmake
+@@ -5,6 +5,8 @@
+ endif()
+ 
+ find_package(MKLDNN QUIET)
++find_library(MKLDNN_LIBRARIES dnnl)
++set(MKLDNN_FOUND TRUE)
+ 
+ if(NOT TARGET caffe2::mkldnn)
+   add_library(caffe2::mkldnn INTERFACE IMPORTED)
+--- a/cmake/Modules/FindMKLDNN.cmake
++++ b/cmake/Modules/FindMKLDNN.cmake
+@@ -16,8 +16,10 @@
+   SET(MKLDNN_LIBRARIES)
+   SET(MKLDNN_INCLUDE_DIR)
+ 
+-  SET(IDEEP_ROOT "${PROJECT_SOURCE_DIR}/third_party/ideep")
+-  SET(MKLDNN_ROOT "${PROJECT_SOURCE_DIR}/third_party/ideep/mkl-dnn")
++  set(IDEEP_ROOT "/usr")
++  set(MKLDNN_ROOT "/usr")
++  set(IDEEP_INCLUDE_DIR "/usr/include")
++  set(MKLDNN_INCLUDE_DIR "/usr/include")
+ 
+   if(USE_XPU) # Build oneDNN GPU library
+     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+@@ -90,6 +92,7 @@
+   IF(EXISTS "${MKLDNN_ROOT}/include/oneapi/dnnl/dnnl_ukernel.hpp")
+     MESSAGE("-- Will build oneDNN UKERNEL")
+     SET(DNNL_EXPERIMENTAL_UKERNEL ON CACHE BOOL "" FORCE)
++    ADD_DEFINITIONS(-DDNNL_EXPERIMENTAL_UKERNEL)
+   ENDIF(EXISTS "${MKLDNN_ROOT}/include/oneapi/dnnl/dnnl_ukernel.hpp")
+ 
+   FIND_PACKAGE(BLAS)
+@@ -165,18 +168,14 @@
+     ENDIF()
+   ENDIF()
+ 
+-  ADD_SUBDIRECTORY(${MKLDNN_ROOT})
++  find_package(dnnl REQUIRED)
++  add_library(dnnl ALIAS DNNL::dnnl)
+ 
+   IF(NOT TARGET dnnl)
+     MESSAGE("Failed to include MKL-DNN target")
+     RETURN()
+   ENDIF(NOT TARGET dnnl)
+ 
+-  IF(NOT APPLE AND CMAKE_COMPILER_IS_GNUCC)
+-    TARGET_COMPILE_OPTIONS(dnnl PRIVATE -Wno-maybe-uninitialized)
+-    TARGET_COMPILE_OPTIONS(dnnl PRIVATE -Wno-strict-overflow)
+-    TARGET_COMPILE_OPTIONS(dnnl PRIVATE -Wno-error=strict-overflow)
+-  ENDIF(NOT APPLE AND CMAKE_COMPILER_IS_GNUCC)
+   LIST(APPEND MKLDNN_LIBRARIES ${MKL_OPENMP_LIBRARY})
+   LIST(APPEND MKLDNN_LIBRARIES dnnl)
+ 

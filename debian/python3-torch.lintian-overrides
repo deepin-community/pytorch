@@ -1,0 +1,4 @@
+binary-without-manpage
+spelling-error-in-binary
+library-not-linked-against-libc
+unusual-interpreter

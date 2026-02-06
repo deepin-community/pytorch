@@ -1,0 +1,26 @@
+Description: Patch cmake to strip third-party directory includes/checks.
+Author: Mo Zhou
+Forwarded: not-needed
+Last-update: 2023-08-22
+
+---
+
+--- a/caffe2/CMakeLists.txt
++++ b/caffe2/CMakeLists.txt
+@@ -87,16 +87,6 @@
+ # Note: the folders that are being commented out have not been properly
+ # addressed yet.
+ 
+-if(NOT MSVC AND USE_XNNPACK)
+-  if(NOT TARGET fxdiv)
+-    set(FXDIV_BUILD_TESTS OFF CACHE BOOL "")
+-    set(FXDIV_BUILD_BENCHMARKS OFF CACHE BOOL "")
+-    add_subdirectory(
+-      "${FXDIV_SOURCE_DIR}"
+-      "${CMAKE_BINARY_DIR}/FXdiv")
+-  endif()
+-endif()
+-
+ add_subdirectory(core)
+ add_subdirectory(serialize)
+ add_subdirectory(utils)

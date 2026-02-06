@@ -1,0 +1,7 @@
+binary-without-manpage
+broken-zip usr/lib/python3/dist-packages/caffe2/python/serialized_test/data/*
+shared-lib-without-dependency-information
+spelling-error-in-binary
+breakout-link
+library-not-linked-against-libc
+unusual-interpreter

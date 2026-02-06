@@ -1,0 +1,462 @@
+Description: The elegant patching work is based on the master branch
+    https://github.com/pytorch/pytorch/issues/14699
+  And we will be able to use that solution in the next upstream release.
+  I don't want to rebase my patches back to this version, so let's go with a fast, yet dirty hack.
+Author: Mo Zhou
+Forwarded: no
+Last-update: 2023-09-30
+
+---
+
+Index: pytorch/CMakeLists.txt
+===================================================================
+--- pytorch.orig/CMakeLists.txt
++++ pytorch/CMakeLists.txt
+@@ -206,10 +206,11 @@ endif()
+ # also add it to cmake/Summary.cmake so that the summary prints out the option
+ # values.
+ include(CMakeDependentOption)
++set(CMAKE_VERBOSE_MAKEFILE ON)
+ option(ATEN_NO_TEST "Do not build ATen test binaries" OFF)
+ option(BUILD_BINARY "Build C++ binaries" OFF)
+ option(BUILD_CUSTOM_PROTOBUF
+-       "Build and use Caffe2's own protobuf under third_party" ON)
++       "Build and use Caffe2's own protobuf under third_party" OFF)
+ option(BUILD_PYTHON "Build Python binaries" ON)
+ option(BUILD_LITE_INTERPRETER "Master flag to build Lite Interpreter" OFF)
+ option(BUILD_SHARED_LIBS "Build libcaffe2.so" ON)
+@@ -262,7 +263,7 @@ else()
+   cmake_dependent_option(USE_CUFILE "Use cuFile" OFF "USE_CUDA AND NOT WIN32" OFF)
+ endif()
+ option(USE_FBGEMM "Use FBGEMM (quantized 8-bit server operators)" ON)
+-option(USE_KINETO "Use Kineto profiling library" ON)
++option(USE_KINETO "Use Kineto profiling library" OFF)
+ option(USE_CUPTI_SO "Use CUPTI as a shared library" ON)
+ option(USE_FAKELOWP "Use FakeLowp operators" OFF)
+ option(USE_GFLAGS "Use GFLAGS" OFF)
+@@ -280,7 +281,7 @@ cmake_dependent_option(USE_STATIC_NCCL "
+ cmake_dependent_option(USE_SYSTEM_NCCL "Use system-wide NCCL" OFF "USE_NCCL"
+                        OFF)
+ option(USE_NNAPI "Use NNAPI" OFF)
+-option(USE_NNPACK "Use NNPACK" ON)
++option(USE_NNPACK "Use NNPACK" OFF)
+ cmake_dependent_option(USE_NUMA "Use NUMA. Only available on Linux." ON "LINUX"
+                        OFF)
+ cmake_dependent_option(USE_NVRTC "Use NVRTC. Only available if USE_CUDA is on."
+@@ -296,7 +297,7 @@ option(USE_PROF "Use profiling" OFF)
+ option(USE_PYTORCH_QNNPACK "Use ATen/QNNPACK (quantized 8-bit operators)" ON)
+ option(USE_SNPE "Use Qualcomm's SNPE library" OFF)
+ option(USE_SYSTEM_EIGEN_INSTALL
+-    "Use system Eigen instead of the one under third_party" OFF)
++    "Use system Eigen instead of the one under third_party" ON)
+ cmake_dependent_option(
+     USE_VALGRIND "Use Valgrind. Only available on Linux." ON
+     "LINUX" OFF)
+@@ -357,7 +358,7 @@ cmake_dependent_option(
+     USE_TENSORPIPE "Use TensorPipe. Only available if USE_DISTRIBUTED is on." ON
+     "USE_DISTRIBUTED AND NOT WIN32" OFF)
+ option(ONNX_ML "Enable traditional ONNX ML API." ON)
+-option(HAVE_SOVERSION "Whether to add SOVERSION to the shared objects" OFF)
++option(HAVE_SOVERSION "Whether to add SOVERSION to the shared objects" ON)
+ option(BUILD_LIBTORCH_CPU_WITH_DEBUG
+        "Enable RelWithDebInfo for libtorch_cpu target only" OFF)
+ cmake_dependent_option(
+@@ -463,6 +464,7 @@ option(USE_SYSTEM_FXDIV "Use system-prov
+ option(USE_SYSTEM_BENCHMARK "Use system-provided google benchmark." OFF)
+ option(USE_SYSTEM_ONNX "Use system-provided onnx." OFF)
+ option(USE_SYSTEM_XNNPACK "Use system-provided xnnpack." OFF)
++option(USE_SYSTEM_TENSORPIPE "Use system-provided tensorpipe." OFF)
+ OPTION(USE_SYSTEM_NVTX "Use system-provided nvtx." OFF)
+ option(USE_GOLD_LINKER "Use ld.gold to link" OFF)
+ if(USE_SYSTEM_LIBS)
+@@ -478,6 +480,7 @@ if(USE_SYSTEM_LIBS)
+   set(USE_SYSTEM_BENCHMARK ON)
+   set(USE_SYSTEM_ONNX ON)
+   set(USE_SYSTEM_XNNPACK ON)
++  set(USE_SYSTEM_TENSORPIPE ON)
+   set(USE_SYSTEM_PYBIND11 ON)
+   if(USE_NCCL)
+     set(USE_SYSTEM_NCCL ON)
+Index: pytorch/cmake/Dependencies.cmake
+===================================================================
+--- pytorch.orig/cmake/Dependencies.cmake
++++ pytorch/cmake/Dependencies.cmake
+@@ -10,10 +10,10 @@ endif(APPLE)
+ set(CMAKE_SKIP_BUILD_RPATH  FALSE)
+ # Don't use the install-rpath during the build phase
+ set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+-set(CMAKE_INSTALL_RPATH "${_rpath_portable_origin}")
++set(CMAKE_INSTALL_RPATH "")
+ # Automatically add all linked folders that are NOT in the build directory to
+ # the rpath (per library?)
+-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
++set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
+ 
+  # UBSAN triggers when compiling protobuf, so we need to disable it.
+ set(UBSAN_FLAG "-fsanitize=undefined")
+@@ -275,7 +275,7 @@ endif()
+ # --- [ PocketFFT
+ set(AT_POCKETFFT_ENABLED 0)
+ if(NOT AT_MKL_ENABLED)
+-  set(POCKETFFT_INCLUDE_DIR "${Torch_SOURCE_DIR}/third_party/pocketfft/")
++  set(POCKETFFT_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/debian/pocketfft/")
+   if(NOT EXISTS "${POCKETFFT_INCLUDE_DIR}")
+     message(FATAL_ERROR "pocketfft directory not found, expected ${POCKETFFT_INCLUDE_DIR}")
+   elif(NOT EXISTS "${POCKETFFT_INCLUDE_DIR}/pocketfft_hdronly.h")
+@@ -549,14 +549,14 @@ if(USE_XNNPACK AND NOT USE_SYSTEM_XNNPAC
+ 
+   include_directories(SYSTEM ${XNNPACK_INCLUDE_DIR})
+   list(APPEND Caffe2_DEPENDENCY_LIBS XNNPACK microkernels-prod)
+-elseif(NOT TARGET XNNPACK AND USE_SYSTEM_XNNPACK)
++elseif(USE_XNNPACK AND NOT TARGET XNNPACK AND USE_SYSTEM_XNNPACK)
+   add_library(XNNPACK SHARED IMPORTED)
+-  add_library(microkernels-prod SHARED IMPORTED)
+-  find_library(XNNPACK_LIBRARY XNNPACK)
+-  find_library(microkernels-prod_LIBRARY microkernels-prod)
++  add_library(microkernels-prod STATIC IMPORTED)
++  find_library(XNNPACK_LIBRARY XNNPACK REQUIRED)
++  find_library(microkernels-prod_LIBRARY microkernels-prod REQUIRED)
+   set_property(TARGET XNNPACK PROPERTY IMPORTED_LOCATION "${XNNPACK_LIBRARY}")
+   set_property(TARGET microkernels-prod PROPERTY IMPORTED_LOCATION "${microkernels-prod_LIBRARY}")
+-  if(NOT XNNPACK_LIBRARY or NOT microkernels-prod_LIBRARY)
++  if(NOT XNNPACK_LIBRARY OR NOT microkernels-prod_LIBRARY)
+     message(FATAL_ERROR "Cannot find XNNPACK")
+   endif()
+   message("-- Found XNNPACK: ${XNNPACK_LIBRARY}")
+@@ -990,7 +990,7 @@ if(USE_CUDNN)
+   if(CUDNN_VERSION VERSION_LESS 8.5)
+     message(FATAL_ERROR "PyTorch needs CuDNN-8.5 or above, but found ${CUDNN_VERSION}. Builds are still possible with `USE_CUDNN=0`")
+   endif()
+-  set(CUDNN_FRONTEND_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/../third_party/cudnn_frontend/include)
++  set(CUDNN_FRONTEND_INCLUDE_DIR /usr/include/)
+   target_include_directories(torch::cudnn INTERFACE ${CUDNN_FRONTEND_INCLUDE_DIR})
+ endif()
+ 
+@@ -1135,7 +1135,18 @@ if(USE_CUDA)
+   include_directories(SYSTEM ${CUB_INCLUDE_DIRS})
+ endif()
+ 
+-if(USE_DISTRIBUTED AND USE_TENSORPIPE)
++if(USE_DISTRIBUTED AND USE_TENSORPIPE AND USE_SYSTEM_TENSORPIPE)
++	add_library(tensorpipe SHARED IMPORTED)
++	find_library(TENSORPIPE_LIBRARY tensorpipe)
++	set_property(TARGET tensorpipe PROPERTY IMPORTED_LOCATION "${TENSORPIPE_LIBRARY}")
++	list(APPEND Caffe2_DEPENDENCY_LIBS tensorpipe)
++	if(USE_CUDA)
++		add_library(tensorpipe_cuda SHARED IMPORTED)
++		find_library(TENSORPIPE_CUDA_LIBRARY tensorpipe_cuda)
++		set_property(TARGET tensorpipe_cuda PROPERTY IMPORTED_LOCATION "${TENSORPIPE_CUDA_LIBRARY}")
++		list(APPEND Caffe2_DEPENDENCY_LIBS tensorpipe_cuda)
++	endif()
++elseif(USE_DISTRIBUTED AND USE_TENSORPIPE)
+   if(MSVC)
+     message(WARNING "Tensorpipe cannot be used on Windows.")
+   else()
+@@ -1523,18 +1534,8 @@ endif()
+ #
+ set(TEMP_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs" FORCE)
+-add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/fmt)
+ 
+-# Disable compiler feature checks for `fmt`.
+-#
+-# CMake compiles a little program to check compiler features. Some of our build
+-# configurations (notably the mobile build analyzer) will populate
+-# CMAKE_CXX_FLAGS in ways that break feature checks. Since we already know
+-# `fmt` is compatible with a superset of the compilers that PyTorch is, it
+-# shouldn't be too bad to just disable the checks.
+-set_target_properties(fmt-header-only PROPERTIES INTERFACE_COMPILE_FEATURES "")
+-
+-list(APPEND Caffe2_DEPENDENCY_LIBS fmt::fmt-header-only)
++find_package(fmt REQUIRED)
+ set(BUILD_SHARED_LIBS ${TEMP_BUILD_SHARED_LIBS} CACHE BOOL "Build shared libs" FORCE)
+ 
+ # ---[ Kineto
+@@ -1576,7 +1577,7 @@ if(USE_KINETO)
+   endif()
+ 
+   set(CAFFE2_THIRD_PARTY_ROOT "${PROJECT_SOURCE_DIR}/third_party" CACHE STRING "")
+-  set(KINETO_SOURCE_DIR "${CAFFE2_THIRD_PARTY_ROOT}/kineto/libkineto" CACHE STRING "")
++  set(KINETO_SOURCE_DIR "${CMAKE_SOURCE_DIR}/debian/kineto/libkineto" CACHE STRING "")
+   set(KINETO_BUILD_TESTS OFF CACHE BOOL "")
+   set(KINETO_LIBRARY_TYPE "static" CACHE STRING "")
+ 
+Index: pytorch/aten/src/ATen/native/quantized/cpu/qnnpack/CMakeLists.txt
+===================================================================
+--- pytorch.orig/aten/src/ATen/native/quantized/cpu/qnnpack/CMakeLists.txt
++++ pytorch/aten/src/ATen/native/quantized/cpu/qnnpack/CMakeLists.txt
+@@ -323,7 +323,7 @@ set_target_properties(pytorch_qnnpack PR
+ set_target_properties(pytorch_qnnpack PROPERTIES PUBLIC_HEADER include/qnnpack_func.h)
+ 
+ # ---[ Configure clog
+-if(NOT TARGET clog)
++if(NOT TARGET clog AND NOT USE_SYSTEM_CLOG)
+   set(CLOG_BUILD_TESTS OFF CACHE BOOL "")
+   set(CLOG_RUNTIME_TYPE "${CPUINFO_RUNTIME_TYPE}" CACHE STRING "")
+   add_subdirectory(
+@@ -331,6 +331,13 @@ if(NOT TARGET clog)
+     "${CONFU_DEPENDENCIES_BINARY_DIR}/clog")
+   # We build static version of clog but a dynamic library may indirectly depend on it
+   set_property(TARGET clog PROPERTY POSITION_INDEPENDENT_CODE ON)
++elseif(NOT TARGET clog and USE_SYSTEM_CLOG)
++  add_library(clog STATIC IMPORTED)
++  find_library(CLOG_LIBRARY clog)
++  if(NOT CLOG_LIBRARY)
++    message(FATAL_ERROR "Cannot find clog")
++  endif()
++  set_target_properties(clog PROPERTIES IMPORTED_LOCATION "${CLOG_LIBRARY}")
+ endif()
+ target_link_libraries(pytorch_qnnpack PUBLIC clog)
+ 
+@@ -370,7 +377,7 @@ elseif(NOT TARGET pthreadpool AND USE_SY
+   message("-- Found pthreadpool: ${PTHREADPOOL_LIBRARY}")
+   set_target_properties(pthreadpool PROPERTIES
+     IMPORTED_LOCATION "${PTHREADPOOL_LIBRARY}")
+-  add_library(pthreadpool_interface INTERFACE)
++  add_library(pthreadpool_interface ALIAS pthreadpool)
+ endif()
+ target_link_libraries(pytorch_qnnpack PUBLIC pthreadpool)
+ 
+Index: pytorch/tools/setup_helpers/cmake.py
+===================================================================
+--- pytorch.orig/tools/setup_helpers/cmake.py
++++ pytorch/tools/setup_helpers/cmake.py
+@@ -388,5 +388,5 @@ class CMake:
+                 # We are likely using msbuild here
+                 build_args += [f"/p:CL_MPCount={max_jobs}"]
+             else:
+-                build_args += ["-j", max_jobs]
++                build_args += ["-j", max_jobs, '-v']
+         self.run(build_args, my_env)
+Index: pytorch/caffe2/CMakeLists.txt
+===================================================================
+--- pytorch.orig/caffe2/CMakeLists.txt
++++ pytorch/caffe2/CMakeLists.txt
+@@ -549,6 +549,10 @@ endif()
+ if(USE_CUDA)
+   list(APPEND Caffe2_GPU_CU_SRCS ${Caffe2_GPU_HIP_JIT_FUSERS_SRCS})
+   add_library(caffe2_nvrtc SHARED ${ATen_NVRTC_STUB_SRCS})
++  if(HAVE_SOVERSION)
++    set_target_properties(caffe2_nvrtc PROPERTIES
++      VERSION ${TORCH_VERSION} SOVERSION ${TORCH_SOVERSION})
++  endif()
+   if(MSVC)
+     # Delay load nvcuda.dll so we can import torch compiled with cuda on a CPU-only machine
+     set(DELAY_LOAD_FLAGS "-DELAYLOAD:nvcuda.dll;delayimp.lib")
+@@ -783,6 +787,13 @@ if(HAVE_SOVERSION)
+   set_target_properties(torch_cpu PROPERTIES
+       VERSION ${TORCH_VERSION} SOVERSION ${TORCH_SOVERSION})
+ endif()
++if(NOT FMT_LIBRARY)
++    add_library(fmt STATIC IMPORTED)
++    find_library(FMT_LIBRARY fmt)
++    set_property(TARGET fmt PROPERTY IMPORTED_LOCATION "${FMT_LIBRARY}")
++endif()
++target_link_libraries(torch_cpu PRIVATE fmt)
++
+ torch_compile_options(torch_cpu)  # see cmake/public/utils.cmake
+ 
+ # Ignore Wdeprecated-XXX errors from third-party libraries
+@@ -936,6 +947,10 @@ if(USE_ROCM)
+     target_link_libraries(torch_hip PRIVATE __caffe2_nccl)
+     target_compile_definitions(torch_hip PRIVATE USE_NCCL)
+   endif()
++  if(HAVE_SOVERSION)
++	  set_target_properties(torch_hip PROPERTIES
++		  VERSION ${TORCH_VERSION} SOVERSION ${TORCH_SOVERSION})
++  endif()
+ 
+   if(USE_PRECOMPILED_HEADERS)
+     target_precompile_headers(torch_hip PRIVATE
+@@ -949,6 +964,10 @@ elseif(USE_CUDA)
+     # are linked with the rest of CUDA code. Workaround by linking them separately.
+     add_library(torch_cuda ${Caffe2_GPU_SRCS} ${Caffe2_GPU_CU_SRCS})
+     set_property(TARGET torch_cuda PROPERTY CUDA_SEPARABLE_COMPILATION ON)
++    if(HAVE_SOVERSION)
++        set_target_properties(torch_cuda PROPERTIES
++            VERSION ${TORCH_VERSION} SOVERSION ${TORCH_SOVERSION})
++    endif()
+ 
+     add_library(torch_cuda_w_sort_by_key OBJECT
+         ${Caffe2_GPU_SRCS_W_SORT_BY_KEY}
+@@ -959,6 +978,10 @@ elseif(USE_CUDA)
+     add_library(torch_cuda
+         ${Caffe2_GPU_SRCS} ${Caffe2_GPU_SRCS_W_SORT_BY_KEY}
+         ${Caffe2_GPU_CU_SRCS} ${Caffe2_GPU_CU_SRCS_W_SORT_BY_KEY})
++    if(HAVE_SOVERSION)
++        set_target_properties(torch_cuda PROPERTIES
++            VERSION ${TORCH_VERSION} SOVERSION ${TORCH_SOVERSION})
++    endif()
+   endif()
+   set(CUDA_LINK_LIBRARIES_KEYWORD)
+   torch_compile_options(torch_cuda)  # see cmake/public/utils.cmake
+@@ -992,6 +1015,10 @@ elseif(USE_CUDA)
+   endif()
+   if(BUILD_LAZY_CUDA_LINALG)
+     add_library(torch_cuda_linalg ${ATen_CUDA_LINALG_SRCS})
++	if(HAVE_SOVERSION)
++		set_target_properties(torch_cuda_linalg PROPERTIES
++			VERSION ${TORCH_VERSION} SOVERSION ${TORCH_SOVERSION})
++	endif()
+     target_compile_definitions(torch_cuda_linalg PRIVATE USE_CUDA BUILD_LAZY_CUDA_LINALG)
+     # Library order is important during static linking
+     # `torch::magma` should be mentioned before other CUDA
+@@ -1129,10 +1156,6 @@ if(USE_XPU)
+   endif()
+ endif()
+ 
+-if(NOT MSVC AND USE_XNNPACK)
+-  TARGET_LINK_LIBRARIES(torch_cpu PRIVATE fxdiv)
+-endif()
+-
+ # ==========================================================
+ # formerly-libtorch flags
+ # ==========================================================
+@@ -1234,11 +1257,11 @@ target_include_directories(torch_cpu PRI
+   ${TORCH_ROOT}/third_party/miniz-3.0.2)
+ 
+ target_include_directories(torch_cpu PRIVATE
+-  ${TORCH_ROOT}/third_party/kineto/libkineto/include)
++  ${CMAKE_SOURCE_DIR}/debian/kineto/libkineto/include)
+ 
+ if(USE_KINETO)
+   target_include_directories(torch_cpu PRIVATE
+-    ${TORCH_ROOT}/third_party/kineto/libkineto/src)
++  ${CMAKE_SOURCE_DIR}/debian/kineto/libkineto/src)
+ endif()
+ 
+ target_include_directories(torch_cpu PRIVATE
+Index: pytorch/torch/CMakeLists.txt
+===================================================================
+--- pytorch.orig/torch/CMakeLists.txt
++++ pytorch/torch/CMakeLists.txt
+@@ -67,7 +67,7 @@ set(TORCH_PYTHON_INCLUDE_DIRECTORIES
+     ${TORCH_ROOT}/third_party/gloo
+     ${TORCH_ROOT}/third_party/onnx
+     ${TORCH_ROOT}/third_party/flatbuffers/include
+-    ${TORCH_ROOT}/third_party/kineto/libkineto/include
++    ${CMAKE_SOURCE_DIR}/debian/kineto/libkineto/include
+     ${TORCH_ROOT}/third_party/cpp-httplib
+     ${TORCH_ROOT}/third_party/nlohmann/include
+ 
+@@ -76,6 +76,12 @@ set(TORCH_PYTHON_INCLUDE_DIRECTORIES
+     ${TORCH_SRC_DIR}/lib
+     )
+ 
++if(NOT FMT_LIBRARY)
++    add_library(fmt STATIC IMPORTED)
++    find_library(FMT_LIBRARY fmt)
++    set_property(TARGET fmt PROPERTY IMPORTED_LOCATION "${FMT_LIBRARY}")
++endif()
++
+ list(APPEND TORCH_PYTHON_INCLUDE_DIRECTORIES ${LIBSHM_SRCDIR})
+ 
+ set(TORCH_PYTHON_LINK_LIBRARIES
+@@ -85,7 +91,7 @@ set(TORCH_PYTHON_LINK_LIBRARIES
+     httplib
+     nlohmann
+     shm
+-    fmt::fmt-header-only
++    fmt
+     ATEN_CPU_FILES_GEN_LIB)
+ 
+ if(USE_ASAN AND TARGET Sanitizer::address)
+@@ -488,6 +494,10 @@ if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Dar
+           ${TORCH_SRC_DIR}/csrc/jit/backends/nnapi/nnapi_backend_lib.cpp
+           ${TORCH_SRC_DIR}/csrc/jit/backends/nnapi/nnapi_backend_preprocess.cpp
+           )
++  if(HAVE_SOVERSION)
++    set_target_properties(nnapi_backend PROPERTIES
++      VERSION ${TORCH_VERSION} SOVERSION ${TORCH_SOVERSION})
++  endif()
+   # Pybind11 requires explicit linking of the torch_python library
+   if(BUILD_LIBTORCHLESS)
+     target_link_libraries(nnapi_backend PRIVATE ${TORCH_LIB} torch_python pybind::pybind11)
+Index: pytorch/test/cpp/tensorexpr/CMakeLists.txt
+===================================================================
+--- pytorch.orig/test/cpp/tensorexpr/CMakeLists.txt
++++ pytorch/test/cpp/tensorexpr/CMakeLists.txt
+@@ -51,7 +51,7 @@ target_include_directories(tutorial_tens
+ # pthreadpool header. For some build environment we need add the dependency
+ # explicitly.
+ if(USE_PTHREADPOOL)
+-  target_link_libraries(test_tensorexpr PRIVATE pthreadpool_interface)
++  target_link_libraries(test_tensorexpr PRIVATE pthreadpool)
+ endif()
+ if(USE_CUDA)
+   target_compile_definitions(test_tensorexpr PRIVATE USE_CUDA)
+Index: pytorch/c10/cuda/CMakeLists.txt
+===================================================================
+--- pytorch.orig/c10/cuda/CMakeLists.txt
++++ pytorch/c10/cuda/CMakeLists.txt
+@@ -66,6 +66,10 @@ if(NOT BUILD_LIBTORCHLESS)
+ 
+   # ---[ Dependency of c10_cuda
+   target_link_libraries(c10_cuda PUBLIC ${C10_LIB} torch::cudart)
++  if(HAVE_SOVERSION)
++      set_target_properties(c10_cuda PROPERTIES
++      VERSION ${TORCH_VERSION} SOVERSION ${TORCH_SOVERSION})
++  endif()
+ 
+   if(NOT WIN32)
+   target_link_libraries(c10_cuda PRIVATE dl)
+Index: pytorch/test/cpp/jit/CMakeLists.txt
+===================================================================
+--- pytorch.orig/test/cpp/jit/CMakeLists.txt
++++ pytorch/test/cpp/jit/CMakeLists.txt
+@@ -6,9 +6,17 @@ add_library(torchbind_test SHARED
+   ${JIT_TEST_ROOT}/test_custom_class_registrations.h
+   ${JIT_TEST_ROOT}/test_custom_class_registrations.cpp
+ )
++if(HAVE_SOVERSION)
++  set_target_properties(torchbind_test PROPERTIES
++    VERSION ${TORCH_VERSION} SOVERSION ${TORCH_SOVERSION})
++endif()
+ target_link_libraries(torchbind_test torch)
+ 
+ add_library(jitbackend_test SHARED ${JIT_TEST_ROOT}/test_backend_lib.cpp)
++if(HAVE_SOVERSION)
++  set_target_properties(jitbackend_test PROPERTIES
++    VERSION ${TORCH_VERSION} SOVERSION ${TORCH_SOVERSION})
++endif()
+ target_link_libraries(jitbackend_test torch)
+ 
+ set(BACKEND_WITH_COMPILER_SRCS
+@@ -25,6 +33,10 @@ endif()
+ add_library(backend_with_compiler SHARED
+         ${BACKEND_WITH_COMPILER_SRCS}
+         )
++if(HAVE_SOVERSION)
++  set_target_properties(backend_with_compiler PROPERTIES
++    VERSION ${TORCH_VERSION} SOVERSION ${TORCH_SOVERSION})
++endif()
+ if(USE_KINETO)
+   set_target_properties(backend_with_compiler PROPERTIES COMPILE_FLAGS
+   "-DUSE_KINETO")
+Index: pytorch/test/cpp/c10d/CMakeLists.txt
+===================================================================
+--- pytorch.orig/test/cpp/c10d/CMakeLists.txt
++++ pytorch/test/cpp/c10d/CMakeLists.txt
+@@ -1,5 +1,9 @@
+ if(USE_CUDA)
+   add_library(c10d_cuda_test CUDATest.cu)
++  if(HAVE_SOVERSION)
++    set_target_properties(c10d_cuda_test PROPERTIES
++      VERSION ${TORCH_VERSION} SOVERSION ${TORCH_SOVERSION})
++  endif()
+   target_include_directories(c10d_cuda_test PRIVATE $<BUILD_INTERFACE:${TORCH_SRC_DIR}/csrc/distributed>)
+   target_link_libraries(c10d_cuda_test torch_cuda)
+   add_dependencies(c10d_cuda_test torch_cuda)
+Index: pytorch/aten/src/ATen/native/quantized/cpu/qnnpack/deps/clog/CMakeLists.txt
+===================================================================
+--- pytorch.orig/aten/src/ATen/native/quantized/cpu/qnnpack/deps/clog/CMakeLists.txt
++++ pytorch/aten/src/ATen/native/quantized/cpu/qnnpack/deps/clog/CMakeLists.txt
+@@ -79,7 +79,7 @@ install(TARGETS clog
+   EXPORT cpuinfo-targets
+   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+-  PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
++  )
+ 
+ # ---[ clog tests
+ if(CLOG_BUILD_TESTS)

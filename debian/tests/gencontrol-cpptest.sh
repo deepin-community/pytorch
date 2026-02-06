@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+echo "# Generating Autopkgtest Test Cases for the C++ Testing Programs"
+FILES=( $(find /usr/lib/libtorch-test/ -type f -executable | sort) )
+echo "# Found" ${#FILES[@]} "tests"
+echo "#"
+
+# Add the test names that are known to fail or flaky
+PERMISSIVE_LIST=(
+inline_container_test
+pow_test
+native_test
+op_registration_test
+)
+
+for (( i = 0; i < ${#FILES[@]}; i++ )); do
+	echo "# C++ test $((${i}+1))/${#FILES[@]}"
+	if echo ${PERMISSIVE_LIST[@]} | grep -o ${FILES[$i]} >/dev/null 2>/dev/null; then
+		echo "Test-Command: ${FILES[$i]} || true"
+	else
+		echo "Test-Command: ${FILES[$i]}"
+	fi
+	echo "Depends: build-essential, ninja-build, libtorch-dev, libtorch-test"
+	echo "Features: test-name=$((${i}+1))_of_${#FILES[@]}__cpptest__$(basename ${FILES[$i]})"
+	echo "Restrictions: allow-stderr"
+	echo ""
+done

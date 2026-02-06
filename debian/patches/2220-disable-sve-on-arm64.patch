@@ -1,0 +1,19 @@
+Description: Disable use of SVE on arm64
+Author: Shengqi Chen <harry@debian.org>
+Bug: https://github.com/pytorch/pytorch/issues/146792
+Last-Update: 2025-02-24
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/cmake/Modules/FindARM.cmake
++++ b/cmake/Modules/FindARM.cmake
+@@ -142,7 +142,9 @@
+     ENDMACRO()
+ 
+     # Check for SVE256 vector length
+-    CHECK_SVE(CXX "SVE256" "-march=armv8-a+sve -msve-vector-bits=256")
++    #CHECK_SVE(CXX "SVE256" "-march=armv8-a+sve -msve-vector-bits=256")
++    SET(CXX_SVE256_FOUND FALSE)
++    message(STATUS "SVE explicitly disabled -- see pytorch issue #146792")
+ 
+     # If SVE256 support is not found, set CXX_SVE_FOUND to FALSE and notify the user
+     if(NOT CXX_SVE256_FOUND)

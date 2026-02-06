@@ -1,5 +1,811 @@
-template-repository (1.0-1) unstable; urgency=medium
+pytorch (2.6.0+dfsg-5) unstable; urgency=medium
 
-  * Initial release
+  * Bugfix in SOVERSION patch and add missing libraries in shlib file.
+  * Update .shlibs dependency template for ROCm variant.
+  * Do not install libc10d_cuda_test.so in library package.
+  * Delete test binaries that pull libc10d_cuda_test.so.
 
- -- Tsic404 <liuheng@deepin.org>  Sat, 28 Jan 2023 13:46:49 +0800
+ -- Mo Zhou <lumin@debian.org>  Mon, 10 Mar 2025 14:44:22 -0400
+
+pytorch (2.6.0+dfsg-4) unstable; urgency=medium
+
+  [ Christian Bayle ]
+  * (Work-in-progress) d/rules: Fill missing bits for PyTorch ROCm .
+
+  [ Mo Zhou ]
+  * [CUDA] Correctly link against libnvtoolsext.so.1 (Closes: #1098962)
+  * Generate *.shlibs to override the default dependency template.
+    This makes packages built against libtorchX.Y to use the following
+    dependency template:
+      libtorchX.Y | libtorch-cuda-X.Y | libtorch-rocm-X.Y
+  * Add .pydist files to override dependency template of python3-torch*.
+    This makes packages built against python3-torch to use the following
+    dependency template:
+      python3-torch | python3-torch-cuda | python3-torch-rocm
+  * Remove automatically generated files on clean.
+
+ -- Mo Zhou <lumin@debian.org>  Wed, 05 Mar 2025 23:01:32 -0500
+
+pytorch (2.6.0+dfsg-3) unstable; urgency=medium
+
+  [ Mo Zhou ]
+  * [CUDA] Fix autopkgtest dependency conflict.
+  * autopkgtest: Skip train_mnist test on s390x due to being big-endian
+    (closes: #1098784).
+
+  [ Shengqi Chen ]
+  * d/patches: add patch to disable SVE on arm64 to prevent SIGILL.
+
+ -- Shengqi Chen <harry@debian.org>  Mon, 24 Feb 2025 14:36:09 +0800
+
+pytorch (2.6.0+dfsg-2) unstable; urgency=medium
+
+  [ Jordan Justen ]
+  * d/rules: Upstream dropped USE_VULKAN_SHADERC_RUNTIME (v2.0.0)
+  * d/rules: Upstream dropped USE_VULKAN_WRAPPER (v1.10.0)
+  * debian: Enabled USE_VULKAN during build
+
+  [ Mo Zhou ]
+  * [CUDA] Update CUDA arch list to 5.0;6.0;7.0;7.5;8.0;8.6;9.0+PTX.
+  * [ROCm] Add missing B-D libamdhip64-dev.
+  * Sync the vulkan Build-Deps for CUDA and ROCm variants.
+  * Dependency bugfix: do not allow co-existence of two libtorchX.Y
+    versions.
+  * autopkgtest:
+    + Add real CNN training test using FashionMNIST.
+    + Mark {pow,native}_test as flaky (failed on arm64).
+    + Mark op_registration_test as flaky (failed on ppc64el).
+
+  [ Shengqi Chen ]
+  * d/patches: fix linkage to cpp-httplib in use-system-httplib.patch
+
+ -- Shengqi Chen <harry@debian.org>  Fri, 21 Feb 2025 16:52:24 +0800
+
+pytorch (2.6.0+dfsg-1) unstable; urgency=medium
+
+  [ Mo Zhou ]
+  * [CUDA] Do not use the too-new nvtx3.hpp header that does not exist
+    in archive.
+
+  [ Shengqi Chen ]
+  * Add patch to fix FTBFS on arm64 with GCC 14 (see: #1094828)
+  * Upload to unstable.
+
+ -- Shengqi Chen <harry@debian.org>  Tue, 18 Feb 2025 01:54:23 +0800
+
+pytorch (2.6.0+dfsg-1~exp1) experimental; urgency=medium
+
+  * New upstream version 2.6.0+dfsg
+  * d/copyright: exclude fbjni, composable_kernel and (not released) ci
+    files from source tar
+  * d/control: add myself to uploaders
+
+ -- Shengqi Chen <harry@debian.org>  Fri, 31 Jan 2025 00:20:10 +0800
+
+pytorch (2.6.0~rc9+dfsg-1~exp1) experimental; urgency=medium
+
+  * Team upload.
+  * New upstream version 2.6.0~rc9+dfsg
+    + refresh existing patches
+    + bump SONAME to libtorch2.6
+    + update embedded kineto to 338140f58a28d599da3434ced4fd2d75dd1a213d
+    + d/README.Source: update according to current status
+  * d/patches: add fix for XNNPACK in dirtyhack.patch
+  * d/copyright: remove vanished files and licenses
+  * Remove some unused lintian overrides
+  * d/control: adjust version requirements of libdnnl and libxnnpack in
+    Build-Depends
+
+ -- Shengqi Chen <harry@debian.org>  Tue, 28 Jan 2025 23:59:57 +0800
+
+pytorch (2.5.1+dfsg-4) unstable; urgency=medium
+
+  * Do not install unneeded shared objects, really.
+  * Delete the test binary that pulls unneeded shared objects.
+
+ -- Mo Zhou <lumin@debian.org>  Fri, 03 Jan 2025 13:13:08 -0500
+
+pytorch (2.5.1+dfsg-3) unstable; urgency=medium
+
+  [ Stephen Kitt ]
+  * Escape $ symbols in sed commands (Closes: #1088810)
+  * debian/rules: avoid $(shell) where possible
+
+  [ Mo Zhou ]
+  * Autopkgtest: mark inline_container_test as flaky.
+  * Refresh autopkgtest control file.
+  * Add notes to d/rules for python3 support -- we only support one single
+    python3 version, due to libtorch_python.so is built against a specific
+    version and conflicts with other versions.
+  * d/rules: Correct llvm-config version.
+  * d/control: Add the missing B-D libzstd-dev.
+  * Fix missing error trapping in Makefiles. (Closes: #1090052)
+  * [trivial] rules: Replace spaces into tabs for consistent formatting.
+  * rules: Only install necessary shared objects. (Closes: #1090053)
+
+ -- Mo Zhou <lumin@debian.org>  Fri, 27 Dec 2024 00:36:00 -0500
+
+pytorch (2.5.1+dfsg-2) unstable; urgency=medium
+
+  * [CUDA] Build-Depends libcutlass-dev (>= 3.4.1+ds-2) to fix missing files.
+
+ -- Mo Zhou <lumin@debian.org>  Sun, 24 Nov 2024 13:36:43 -0500
+
+pytorch (2.5.1+dfsg-1) unstable; urgency=medium
+
+  [ Shengqi Chen ]
+  * New upstream version 2.5.1+dfsg
+  * d/patches: add patch to remove dependency on python3-astunparse
+    (closes: #1086773)
+
+  [ Mo Zhou ]
+  * Correction to the version.txt patch.
+
+ -- Mo Zhou <lumin@debian.org>  Sat, 23 Nov 2024 13:30:36 -0500
+
+pytorch (2.5.0+dfsg-1) unstable; urgency=medium
+
+  * Team upload.
+  * New upstream version 2.5.0:
+    + Bump libtorch SOVERSION from 2.4 to 2.5.
+    + d/rules: bump SOVERSION and PATCH.
+    + d/kineto: update embeded source with commit
+      d9753139d181b9ff42872465aac0e5d3018be415.
+    + Remove embedded foxi which is not used anymore.
+  * Packaging related:
+    + d/copyright: remove superfluous excludes and comments.
+    + d/control: bump minimal version of libdnnl in B-D.
+    + d/control: add nlohmann-json3-dev in B-D.
+    + d/control: use llvm-19 in B-D (incompatibility fixed by upstream).
+    + d/control: remove dead or unsupported architectures.
+      [CPU] now supports: amd64 arm64 ppc64el s390x riscv64
+  * Patch related:
+    + refresh all patches, remove useless ones.
+    + update use-system-dnnl.patch to pass essential definition.
+    + re-order in series file & refresh.
+    + add patch to remove pkg_resources from tests.
+  * Test related:
+    + remove all tests from permissive list (not flaky now).
+    + re-generate libtorch test stanza.
+
+ -- Shengqi Chen <harry-chen@outlook.com>  Sat, 02 Nov 2024 13:30:22 +0800
+
+pytorch (2.4.1-4) unstable; urgency=medium
+
+  * Revert "Disable tensorpipe and remove it from Build-Depends,
+    deprecated by upstream." There is a known python import error
+    when disabling tensorpipe while enabling distributed backends.
+
+ -- Mo Zhou <lumin@debian.org>  Thu, 24 Oct 2024 03:34:25 -0400
+
+pytorch (2.4.1-3) unstable; urgency=medium
+
+  [ Shengqi Chen ]
+  * d/README.Source: update according to pytorch v2.5 release
+  * d/control: bump std-ver to 4.7.0 (no changes required)
+  * d/control: remove more useless Build-Depends
+  * d/patches: remove already applied patch since 2.0.0
+  * d/patches: update metadata & remove useless patch
+  * d/patches: modify patch to also fix the version in built pip wheel
+  * d/rules: remove duplicated dh_auto_clean target.
+  * d/copyright: update according to current source
+
+  [ Mo Zhou ]
+  * Cleanup build options and B-Ds, and add more comments in d/rules.
+    - [CPU] Enable MPI (mpi-default-dev) for CPU variant.
+    - [all variants] Disable tensorpipe, deprecated and archived by upstream.
+    - [all variants] remove B-D and corresponding build options on leveldb,
+      lmdb, ffmpeg, opencv, zstd, etc. These dependencies are gone along
+      with the upstream's deprecation of caffe2.
+  * [CPU] Specify Build-Depends on llvm-18 to avoid FTBFS against llvm-19.
+    (Closes: #1085004)
+  * [CPU] Remove the rpath for openmpi shared object.
+  * [CUDA] Install the missed libnnapi_backend.so
+  * [ROCM] add initial attempt to enable ROCM build. (WIP)
+  * Autopkgtest: update the blas test with cuda mode.
+  * README.Source: update dependency tracker.
+
+ -- Mo Zhou <lumin@debian.org>  Tue, 22 Oct 2024 23:58:27 -0400
+
+pytorch (2.4.1-2) unstable; urgency=medium
+
+  * [CPU] Remove LLVM from B-D for the CPU-only version.
+  * [CUDA] Sync the latest control changes to control.cuda.
+  * [CUDA] Specify B-D LLVM version as 18. It FTBFS with 19 (llvm-dev default).
+  * [CUDA] Do not install the nvfuser shared object due to upstream removal.
+  * [CUDA] Upload to unstable. (Closes: #1064484, #1053339, #1065943)
+
+ -- Mo Zhou <lumin@debian.org>  Fri, 11 Oct 2024 00:05:38 -0400
+
+pytorch (2.4.1-1) unstable; urgency=medium
+
+  [ Shengqi Chen ]
+  * d/README.Source: update dependency status
+
+  [ Mo Zhou ]
+  * New upstream version 2.4.1 (Closes: #1070379, #1078808, #1078795)
+    (Fixes CVE-2024-31580 CVE-2024-31583 CVE-2024-31584)
+    + Bump SOVERSION from 2.1 to 2.4
+    * Require versioned B-D sleef >= 3.6.1-1~. (Closes: #1071655)
+      Sleef was the reason why the 2.1.2 version FTBFS on ppc64el.
+    * Conflicts+Replaces libtorch2.1 and libtorch-cuda-2.1.
+    * Update d/rules and install libnnapi_backend.so for CPU version.
+    * Re-generate the autopkgtest control file.
+    * README.Source: update dependency list. All clear for 2.4.1 CPU version.
+    * d/copyright: update for the new release.
+  * Embeded and Third-Party Sources:
+    - d/copyright: Exclude newly embeded opentelemetry-cpp and cpp-httplib
+    - d/copyright: embeded third_party/nvfuser has been removed by upstream.
+    - Remove embeded expecttest since it has been individually packaged.
+    - Remove redundant copy of embeded valgrind headers.
+    * Upgrade embeded kineto be1317644c68b4bfc4646024a6b221066e430031.
+    * Upgrade embeded pocketfft to 9d3ab05a7fffbc71a492bc6a17be034e83e8f0fe.
+    * Apply patch to embeded kineto.
+    * Embed a partial copy of dynolog-7d04a0053a845370ae06ce317a22a48e9edcc74e
+      into the embeded kineto.
+  * Patchwork:
+    * Rebase and refresh all existing patches.
+    + Add patch to remove the dependency on opentelemetry.
+    + Patch code to use system cpp-httplib instead.
+    + Patch cmake to fix sleef symbol missing linker error for test binaries.
+    * Hack CMake to workaround install path issue for caffe2.
+  * Remove deprecated pytorch-src install script.
+
+ -- Mo Zhou <lumin@debian.org>  Sun, 29 Sep 2024 21:37:55 -0400
+
+pytorch (2.1.2+dfsg-4) unstable; urgency=medium
+
+  * Autopkgtest: do not run python tests -- too slow on our CI.
+  * Autopkgtest: refresh C++ test list.
+  * Autopkgtest: Disable dangling symlink test (may fail due to other package).
+  * rules: Remove the dangling libnnapi_backend.so symlink.
+  * Drop B-D on python3-distutils (Closes: #1065941).
+
+ -- Mo Zhou <lumin@debian.org>  Wed, 24 Apr 2024 19:26:04 -0400
+
+pytorch (2.1.2+dfsg-3) unstable; urgency=medium
+
+  * Remove merged ppc64el FTBFS patch.
+  * Remove the version requirement for libsleef-dev.
+  * Update control file for CUDA variant. (Closes: #1064484)
+  * <cuda> Require cutlass >= 3.1.0.
+
+ -- Mo Zhou <lumin@debian.org>  Wed, 28 Feb 2024 12:06:31 -0500
+
+pytorch (2.1.2+dfsg-2) unstable; urgency=medium
+
+  [ Petter Reinholdtsen ]
+  * Added patch numbering scheme README and rename patches to follow suit.
+
+  [ Mo Zhou ]
+  * Correct wrong patch numberings.
+  * Control: Does not compile against sleef from git.
+  * Upload to unstable. (Closes: #1060097)
+
+ -- Mo Zhou <lumin@debian.org>  Tue, 13 Feb 2024 13:22:09 -0500
+
+pytorch (2.1.2+dfsg-1) experimental; urgency=medium
+
+  [ Petter Reinholdtsen ]
+  * Updated Standards-Version from 4.6.0.1 to 4.6.2.  No changes needed.
+  * Updated patch metadata based on git history.
+
+  [ Mo Zhou ]
+  * New upstream version 2.1.2+dfsg
+  * README.Source: update dependency track list for v2.1.2
+  * Update embeded kineto to 49e854d805d916b2031e337763928d2f8d2e1fbf.
+    - Delete unwanted binary files from embeded kineto.
+    * Patch embeded kineto to use system lib.
+    + Embed a partial copy of dynolog for the embeded kineto.
+      Recursive git submodule is not fun at all.
+    * Remove more unnecessary files from embeded kineto.
+    * We will remove kineto and disable it for PyTorch/v2.2.X.
+  * Update debian/copyright:
+    * d/copyright: Remove mimalloc from third_party dir. (Files-Excluded)
+    * d/copyright: update for third_party/nvfuser.
+  * Remove embeded nvfuser from debian/. We use the one in third_party.
+  * Update patches:
+    * Rebase existing patches.
+    - Auto-regenerate flatbuffers and deprecate the flatbuffers patch.
+    * Patch functorch code to fix FTBFS.
+  * Update debian/rules:
+    * Fix cmake find_package LLVM by hinting with correct path.
+    * d/rules: Update versions and correct the version.
+    * Install libnnapi_backend.so to libtorch2.1.
+  * Update debian/control and other debhelper files:
+    * Bump ABI/SOVERSION from 2.0 to 2.1. Update Breaks+Replaces accordingly.
+    * Require build-dep libcpuinfo-dev >= 0.0~git20230113.6481e8b~.
+    * Require build-dep libonnx-dev >= 1.14.1~.
+    * Require build-dep libgloo-dev (>= 0.0~git20230519.597accf~).
+    * Require build-dep libdnnl-dev (>= 3.1.1~).
+    * Require build-dep libideep-dev (>= 0.0~git20230825.6f4d653~).
+    * Remove build-dep version requirement on libflatbuffers-dev.
+      Flatbuffer files are automatically re-generated during build now.
+  * Specific changes to <cuda> variant.
+    * <cuda> Reduce CUDA_ARCH_LIST to 6.1;7.5;8.6 for smaller binary.
+  * Upload to experimental. Prepare for transition.
+
+ -- Mo Zhou <lumin@debian.org>  Mon, 01 Jan 2024 00:26:26 -0500
+
+pytorch (2.0.1+dfsg-5) unstable; urgency=medium
+
+  * Get rid of the embeded copy of clog.
+  * Patch cmake: do not install clog.h (Closes: #1052260)
+
+ -- Mo Zhou <lumin@debian.org>  Sun, 01 Oct 2023 10:03:47 -0400
+
+pytorch (2.0.1+dfsg-4) unstable; urgency=medium
+
+  * Don't install the work-in-progress dh_pytorch for now.
+  * rules: Add more annotations to ease reading.
+  * rules: Sort install commands.
+  * Patch embeded nvfuser to have SOVERSION.
+  * <cuda> rules: Install the libnvfuser with SOVERSION.
+    This fixes the cannot load libnvfuser.* error message during import.
+  * Do not install libnnapi_backend.so (not built).
+  * Autopkgtest: make dangling symlink check permissive. (Closes: #1051828)
+
+ -- Mo Zhou <lumin@debian.org>  Wed, 13 Sep 2023 15:01:04 -0400
+
+pytorch (2.0.1+dfsg-3) unstable; urgency=medium
+
+  * rules: Copy googletest source instead of symlinking.
+  * Add llvm-dev to B-D and toggle USE_LLVM.
+  * Install the libnnapi_backend.so shlib.
+  * rules: Automatically switch to mold/lld when they are installed.
+  * Take back third_party/valgrind-headers.
+  * Import the nvfuser thirdparty library.
+    - remove doc directory from the embeded nvfuser.
+    * Copyright: add entry for the embeded debian/nvfuser source code.
+  * <cuda> Variant:
+    * <cuda> Add the missing B-D libcupti-dev.
+    * <cuda> Specify USE_MAGMA = OFF.
+    * <cuda> Patch: fix cudnn_frontend include path.
+    * <cuda> Cherry-pick upstream commit to fix CUDA12 NVCC OOM.
+    * <cuda> rules: Update shlib list for install targets.
+  * README.Source: update dependency tracking list
+
+ -- Mo Zhou <lumin@debian.org>  Fri, 08 Sep 2023 19:42:31 -0400
+
+pytorch (2.0.1+dfsg-2) unstable; urgency=medium
+
+  * Cherry-pick upstream fix for ppc64el. (Closes: #1051258)
+  * The libcaffe2* symlinks should no longer exist as caffe2 is disabled
+    (due to upstream deprecation) and no longer built. (Closes: #1035458)
+  * Patch cmake template to fix including of build path. (Closes: #1031687)
+
+ -- Mo Zhou <lumin@debian.org>  Wed, 06 Sep 2023 15:50:27 -0400
+
+pytorch (2.0.1+dfsg-1) unstable; urgency=medium
+
+  * Control: add the missing Conflicts+Replaces packages.
+  * Control: specify version requirement for pytorch-specific dependencies.
+  * Files-Excluded: do not exclude third_party/nvfuser.
+    We will need it for the CUDA version.
+  * Upload to unstable. PyTorch has been broken in Sid for a while.
+
+ -- Mo Zhou <lumin@debian.org>  Mon, 04 Sep 2023 17:17:32 -0400
+
+pytorch (2.0.1+dfsg-1~exp1) experimental; urgency=medium
+
+  * New upstream version 2.0.1+dfsg
+    (Closes: #1024903, #1037824, #1050175)
+  * README.Source: update dependency tracking list
+  * Copyright:
+    - Exclude third party embeded copy from upstream source.
+    + Go through all source files again and update the d/copyright,
+      as the upstream made massive code base change in the 2.0 release.
+    * Files-Excluded: Do not remove valgrind-headers.
+      These files will be included at the next gbp-import-orig.
+  * Packages:
+    * Bump SOVERSION from 1.13 to 2.0.
+  * Patch work updates:
+    * Rebase existing patches, and remove unused ones.
+    + Add patch to fix ftbfs with GCC-13.
+  * Build modifications:
+    + Specify -Wno-dangling-reference compiler flag.
+    + rules: Disable valgrind for build.
+    * Patch setup.py to skip installing valgrind headers.
+    * rules: Export PYTORCH_BUILD_VERSION.
+    * rules: No longer install the dangling include/TH symlink.
+  * Embeded source copies:
+    * Upgrade embeded kineto to new snapshot.
+      + Patch embeded kineto to use system lib.
+      + Patch the embeded kineto to fix GCC-13 ftbfs.
+      - delete some unneeded files from embeded kineto.
+      - remove th_plugin directory from libkineto.
+    * Import dynolog partial snapshot for libkineto third_party.
+    * Upgrade embeded expecttest to 0.1.6.
+      (76f4af2667186271162e03817f2bbda782ec773d)
+    * Upgrade embeded foxi to c278588e34e535f0bb8f00df3880d26928038cad.
+  * Autopkgtest updates:
+    * Autopkgtest: make the embeded expecttest module available.
+    * Autopkgtest: correctly import embeded expecttest.
+    * Autopkgtest: add the missing python3-scipy runtime deps.
+    * Autopkgtest: add test cases to detect dangling symlinks
+    * Autopkgtest: refresh test list using gencontrol.sh
+    * Autopkgtest: add all python tests into permissive list.
+  * Upload to experimental.
+
+ -- Mo Zhou <lumin@debian.org>  Sat, 02 Sep 2023 12:43:53 -0400
+
+pytorch (1.13.1+dfsg-6) UNRELEASED; urgency=medium
+
+  * cuda: minor fix to the sed pattern.
+  * Enable Gloo and XNNPACK for riscv64 as well.
+  * Cover more CUDA architectures.
+  * run-cpptest: support pytorch-cuda as well.
+  * Add run-pytest-core.sh
+  * Embed https://github.com/ezyang/expecttest v0.1.4 for python testing.
+  * run-{cpp,py}test.sh: improve scripts
+  * run-pytest.sh: support --findall option
+  * run-pytest.sh: do not exit upon fail
+  * Autopkgtest: add back to core python tests.
+  * Remove shebang.patch. Done automatically by sed in d/rules.
+  * lintian: reduce duplicated overrides
+
+ -- Mo Zhou <lumin@debian.org>  Fri, 18 Aug 2023 13:33:53 -0400
+
+pytorch (1.13.1+dfsg-5) experimental; urgency=medium
+
+  * Overhaul the packaging for preparing different flavors of pytorch,
+    which includes cpu-only (default), cuda, and rocm (not implemented yet).
+  * The cuda version of control file is located at debian/control.cuda
+    Lots of build dependencies are added. The cuda variant of pytorch
+    must enter contrib due to non-free dependencies from Nvidia.
+  * The script debian/cudabuild.sh is provided to convert the debian
+    directory for the cuda build.
+    * cuda: require cudnn >= 8.7.0.84~cuda11.8 for automatic build.
+    * cuda: Build for CUDA architectures 6.0 7.0 8.0.
+  * No longer build Caffe2 (it is already deprecated).
+  * Update debian/patches to enable HAVE_SOVERSION for cuda shlibs.
+  * Let the CPU/CUDA version conflicts/replaces each other.
+  * Disale+Remove gflags and google-glog dependencies.
+  * Update Lintian overrides.
+  * watch: set dversionmangle as auto
+  * copyright: Justify src:pytorch-cuda is the same source as src:pytorch.
+  * rules: toggle USE_KINETO=ON
+  * copyright: update
+  * Patch embeded kineto to prevent further git submodule inclusion.
+  * Toggle USE_DISTRIBUTED on any architecture.
+  * Autopkgtest: support --cuda arg in test script.
+
+ -- Mo Zhou <lumin@debian.org>  Sat, 25 Mar 2023 23:15:08 -0400
+
+pytorch (1.13.1+dfsg-4) unstable; urgency=medium
+
+  [ Aron Xu ]
+  * Disable CI on salsa, unable to complete a build
+
+  [ Mo Zhou ]
+  * Switch back to Generic BLAS against correctly build against it.
+    We have update-alternatives for the BLAS/LAPACK backends.
+    https://wiki.debian.org/DebianScience/LinearAlgebraLibraries
+  * Only in this way can both Numpy and Torch consistently load the
+    same BLAS implementation, lest bad things such as threading library
+    collision happen.
+
+ -- Mo Zhou <lumin@debian.org>  Tue, 14 Mar 2023 13:21:37 -0400
+
+pytorch (1.13.1+dfsg-3) unstable; urgency=medium
+
+  [ Mo Zhou ]
+  * fix cmake for Closes: #997931
+
+  [ Aron Xu ]
+  * d/rules: more cmake fixes
+  * d/control: build with libopenblas-pthread-dev instead of libblas-dev
+
+ -- Aron Xu <aron@debian.org>  Wed, 08 Feb 2023 01:54:15 +0800
+
+pytorch (1.13.1+dfsg-2) unstable; urgency=medium
+
+  * Team upload.
+  * d/tests/control: disable never passed py-tests
+
+ -- Aron Xu <aron@debian.org>  Mon, 30 Jan 2023 21:54:24 +0800
+
+pytorch (1.13.1+dfsg-1) unstable; urgency=medium
+
+  [ Aron Xu ]
+  * Team upload.
+  * New upstream version 1.13.1 (Closes: #1027851)
+    Fixes CVE-2022-45907.
+  * d/rules: remove only build/ directory
+  * d/rules: USE_ITT = OFF
+  * Bump SOVERSION to 1.13
+  * d/control: add versioned build-dep to ideep
+  * debian: carry kineto 20210224.0703c78 for header-only use
+  * dirtyhack.patch: refresh and add hack of kineto
+  * 80272.patch: merged upstream, removing
+  * cherry-pick upstream py3.11 compatibility patches
+  * Update autopkgtest control file
+  * d/upstream/metadata: add Bug-Database
+
+  [ Andreas Tille ]
+  * Fix watch file
+
+  [ Mo Zhou ]
+  * Add fmtlib-revert.patch
+  * Update flatbuffers patch
+
+ -- Aron Xu <aron@debian.org>  Sat, 28 Jan 2023 23:31:42 +0800
+
+pytorch (1.12.1-1) unstable; urgency=medium
+
+  * New upstream version 1.12.1
+  * Rebase and refresh existing patches.
+
+ -- Mo Zhou <lumin@debian.org>  Fri, 30 Sep 2022 20:50:32 -0400
+
+pytorch (1.12.0-1) unstable; urgency=medium
+
+  * New upstream version 1.12.0 (June 28 2022) (Closes: #1004782, #1009200)
+  * Autopkgtest: use openblas or blis instead of reference blas.
+  * Patch to fix wrong shebang in several .py files.
+  * Refresh existing patches.
+  * Update lintian overrides.
+  * Upload to unstable.
+
+ -- Mo Zhou <lumin@debian.org>  Mon, 12 Sep 2022 17:16:34 -0400
+
+pytorch (1.12.0~rc1-1) experimental; urgency=medium
+
+  * New upstream version 1.12.0~rc1 (May 2022)
+  * Remove pretrained networks via Files-Excluded.
+  * Cherry-pick upstream PR 80272 for pybind11 in cmake.
+  * Embed pocketfft ea778e37710c07723435b1be58235996d1d43a5a.
+  * Revise debian/{rules,control} to reflect the following changes:
+    - No plan to enable FBGEMM, NNPACK, etc.
+    - Specify USE_KINETO=OFF
+    * Reflect upstream SOVERSION bump to 1.12
+    + Build-depends on flatbuffers and re-generate cpp from .fbs file.
+      (use --cpp --gen-all --gen-mutable for flatc).
+  * Rebase existing patches and add new patches:
+    * Rebase dirtyhack.patch
+    * Rebase mkldnn.patch, also disable ONEDNN_GRAPH.
+    * Rebase shebang.patch
+    * Rebase pytorch_glog_update.patch
+    * Change include path for pocketfft.
+    + Add patch for flatbuffers v2.0.6 migration
+  * Autopkgtest: update tests.
+    - Temprarily disable python autopkgtests due to missing dep.
+    + Autopkgtest: add a simple sequential model test.
+  * Update d/copyright and some lintian overrides.
+
+ -- Mo Zhou <lumin@debian.org>  Mon, 27 Jun 2022 20:45:06 -0700
+
+pytorch (1.8.1-5) unstable; urgency=medium
+
+  * Patch for compatibility with glog 0.6.0+. (Closes: #1007200)
+
+ -- Mo Zhou <lumin@debian.org>  Tue, 22 Mar 2022 15:56:16 -0400
+
+pytorch (1.8.1-4) unstable; urgency=medium
+
+  * B-D on python3-dev instead of -all-dev. (Closes: #1004331)
+    We only build with one Py3 version due to the buildsystem complexity.
+  * Explicitly fix python and shell shebang in d/rules.
+  * Fix superfluous-file-pattern in d/copyright.
+  * Fix duplicate-short-description in d/control.
+  * Bump Standards-Version to 4.6.0.1 (no change).
+  * Update lintian overrides.
+
+ -- Mo Zhou <lumin@debian.org>  Tue, 01 Feb 2022 20:11:00 -0500
+
+pytorch (1.8.1-3) unstable; urgency=medium
+
+  * Add comments in d/rules on package maintainence.
+  * Mask python spectral_ops test which requires MKL. (Closes: #995360)
+  * Mask python binary_ufuncs autopkgtest.
+  * Only build on modern 64-bit architectures. (Closes: #994423)
+  * Add missing Dep libprotobuf-dev for libtorch-dev.
+  * d/watch: Track releases instead of tags.
+
+ -- Mo Zhou <lumin@debian.org>  Sun, 23 Jan 2022 09:14:58 -0500
+
+pytorch (1.8.1-2) unstable; urgency=medium
+
+  * Upload to unstable.
+  * Let python3-torch Depend on libtorch-test to fix broken link.
+    (Closes: #988778)
+
+ -- Mo Zhou <lumin@debian.org>  Mon, 06 Sep 2021 00:22:04 -0400
+
+pytorch (1.8.1-1) experimental; urgency=medium
+
+  [ Michael R. Crusoe ]
+  * Mark libtorch1.7 as Multi-Arch: same
+
+  [ Mo Zhou ]
+  * New upstream version 1.8.1
+  * Upgrade embeded foxi to 6a4e19a2aaf7ae4b9fa9597526e65b395d5e79ad.
+  * Rebase dirtyhack.patch.
+  * Add libnuma-dev to Build-Depends.
+  * SOVERION bump for binary packages.
+  * Refresh shebang.patch and other existing patches.
+  * Refresh autopkgtest control file.
+
+ -- Mo Zhou <lumin@debian.org>  Fri, 21 May 2021 14:20:58 +0800
+
+pytorch (1.7.1-7) unstable; urgency=medium
+
+  * Remove B-D libunwind.
+  * Update autopkgtest.
+
+ -- Mo Zhou <lumin@debian.org>  Thu, 11 Feb 2021 15:13:27 +0800
+
+pytorch (1.7.1-6) unstable; urgency=medium
+
+  * Make B-D:libunwind-dev specific to amd64,arm64,armhf,ppc64el.
+
+ -- Mo Zhou <lumin@debian.org>  Mon, 01 Feb 2021 14:35:46 +0800
+
+pytorch (1.7.1-5) unstable; urgency=medium
+
+  * Add libunwind-dev to avoid weird FTBFS (due to missing header).
+  * Require libonnx-dev (>= 1.7.0+dfsg-3) to avoid FTBFS (Closes: #980636)
+
+ -- Mo Zhou <lumin@debian.org>  Wed, 27 Jan 2021 18:38:00 +0800
+
+pytorch (1.7.1-4) unstable; urgency=medium
+
+  * Allow more autopkgtest cases to fail on armhf.
+
+ -- Mo Zhou <lumin@debian.org>  Sat, 02 Jan 2021 17:17:42 +0800
+
+pytorch (1.7.1-3) unstable; urgency=medium
+
+  * Build against generic BLAS/LAPACK instead of OpenBLAS.
+
+ -- Mo Zhou <lumin@debian.org>  Sun, 27 Dec 2020 19:47:18 +0800
+
+pytorch (1.7.1-2) unstable; urgency=medium
+
+  * Update autopkgtest scripts.
+
+ -- Mo Zhou <lumin@debian.org>  Sun, 20 Dec 2020 13:28:22 +0800
+
+pytorch (1.7.1-1) unstable; urgency=medium
+
+  * New upstream version 1.7.1
+  * Disable OpenMPI in the distributed functionality of pytorch.
+    + Regenerate Autopkgtest control file after removing OpenMPI support.
+    + Explicitly specify USE_MPI=OFF in d/rules.
+  * Add missing runtime deps to autopkgtest and refresh.
+    - Autopkgtest: allow several tests to fail. (Closes: #974210)
+    + Revamp of the python part of autopkgtest and add the missing B-Ds.
+  * Get rid of the symbols control file. (Closes: #977533)
+
+ -- Mo Zhou <lumin@debian.org>  Wed, 16 Dec 2020 20:58:19 +0800
+
+pytorch (1.7.0-2) unstable; urgency=medium
+
+  * Patch cmake to fix ppc64el and s390x FTBFS, really disabling XNNPACK.
+  * d/rules: Only enable QNNPACK on amd64.
+  * Refresh symbols control file for amd64 to fix amd64 FTBFS.
+
+ -- Mo Zhou <lumin@debian.org>  Tue, 24 Nov 2020 20:10:34 +0800
+
+pytorch (1.7.0-1) unstable; urgency=medium
+
+  * Make B-D:libxnnpack-dev amd64 and arm64 arch-specific.
+  * Make USE_DISTRIBUTED and the corresponding Build-Depends specific
+    to the 64-bit architectures: amd64 arm64 ppc64el mips64el s390x.
+  * Upload to unstable.
+
+ -- Mo Zhou <lumin@debian.org>  Tue, 24 Nov 2020 12:59:42 +0800
+
+pytorch (1.7.0-1~exp1) experimental; urgency=medium
+
+  * New upstream version 1.7.0
+  * Add missing python deps for the autopkgtest :: python cases.
+  * Mark libideep-dev/libdnnl-dev & USE_MKLDNN as amd64,arm64,ppc64el-specific.
+  * Patch cmake to strip third-party directory includes/checks.
+  * Turn off USE_PYTORCH_QNNPACK on non-amd64 architectures.
+  * Update embeded foxi to snapshot 4aba696ec8f31794fd42880346dc586486205e0a.
+  * Rebase and refresh existing patches.
+  * Rename binary packages following the SOVERSION bump.
+  * Update dirtyhack.patch and add new B-D libnop-dev.
+  * Refresh symbols control file for amd64.
+  * Autopkgtest: refresh C++ unit test list.
+  * Autopkgtest: refresh the list of python unit tests.
+  * Refresh d/copyright for the new upstream release.
+
+ -- Mo Zhou <lumin@debian.org>  Sun, 22 Nov 2020 14:30:28 +0800
+
+pytorch (1.6.0-5) unstable; urgency=medium
+
+  * Revert introduction of unnecessary python3 dependencies.
+  * Mute dh_auto_configure which triggers incorrect mixed python{3.8,3.9} build.
+  * Refresh symbols control file.
+  * Fix autopkgtest regenerator and refresh d/tests/control.
+  * Let python3-torch also Recommend build-essential (for JIT functionality).
+
+ -- Mo Zhou <lumin@debian.org>  Wed, 21 Oct 2020 00:16:57 +0800
+
+pytorch (1.6.0-4) unstable; urgency=medium
+
+  [ Steffen Möller ]
+  * Added d/u/metadata file
+
+  [ Mo Zhou ]
+  * Address regression bug in dependency data. (Closes: #972540)
+  * Add LaTeX bibliography information to upstream/metadata.
+
+ -- Mo Zhou <lumin@debian.org>  Tue, 20 Oct 2020 17:59:38 +0800
+
+pytorch (1.6.0-3) unstable; urgency=medium
+
+  * Change maintainer mail address into debian-ai@l.d.o
+  * d/rules: Explicitly specify build with default python3.
+  * Refresh symbols control file.
+  * Use those defined-but-unused control variables.
+  * Upload to unstable.
+
+ -- Mo Zhou <lumin@debian.org>  Mon, 19 Oct 2020 16:12:46 +0800
+
+pytorch (1.6.0-2) experimental; urgency=medium
+
+  * Let python3-torch recommend libtorch-dev (= ${binary:Version}).
+  * Let python3-torch recommend ninja-builds (Building PyTorch C++ Extension).
+  * Add debian/tests/run-cpptest.sh for manually running tests.
+  * Refresh test program list for gencontrol-pytest.sh and add run-pytest.sh
+  * Filter out CUDA tests from gencontrol-pytest.sh.
+  * Remove the unnecessary USE_OPENCV=ON override from the patch
+  * Enable DNNL/ideep integration and refresh symbols control file.
+  * Remove "-" signs from rules and add symlink in python3-torch.
+  * Fix the stronger-dependency-implies-weaker problem for python3-torch.
+  * Fix the globbing-patterns-out-of-order problem for d/copyright.
+  * Refresh the shebang patch.
+  * Sort tests in gencontrol-cpptest.sh and regenerate tests/control.
+  * Toggle USE_ZSTD=ON and add the corresponding patches and B-Ds.
+
+ -- Mo Zhou <lumin@debian.org>  Mon, 07 Sep 2020 14:27:37 +0800
+
+pytorch (1.6.0-1) experimental; urgency=medium
+
+  * New upstream version 1.6.0
+  * Refresh shebang.patch.
+  * Significantly rebase dirtyhack.patch as most changes have been upstreamed.
+  * Remove dont-break-dev-null.patch. fixed upstream.
+  * Add some missing Depends for libtorch-dev.
+  * Stripping the quotes in ONNX_NAMESPACE to fix build failure.
+  * Add libtensorpipe-dev to Build-Depends.
+  * Rename libtorch1 -> libtorch1.6 and refresh symbols control file.
+  * dirtyhack.patch: Deal with the fmt and tensorpipe libraries.
+  * rules: use SOVERSION variable and update the install target.
+  * Update d/copyright and apply wrap-and-sort.
+  * Put proper symlinks to usr/lib/python3*/dist-packages/torch/lib.
+
+ -- Mo Zhou <lumin@debian.org>  Mon, 31 Aug 2020 19:41:58 +0800
+
+pytorch (1.5.1-1) experimental; urgency=medium
+
+  * New upstream version 1.5.1
+  * Fix a small part of copyright that lintian complains about.
+  * Rewrite autopkgtest: use script to automatically generate control file.
+  * Automatically generate autopkgtest cases for upstream python tests.
+  * Add the ordinal number to the name of autopkgtest cases.
+  * Rules: add option to allow users to rebuild to -march=native.
+  * Patch a python test case lest it break the /dev/null file.
+  * Add build-essential and libtorch-dev to autopkgtest deps.
+  * Refresh symbols control file.
+
+ -- Mo Zhou <lumin@debian.org>  Sun, 26 Jul 2020 21:28:04 +0800
+
+pytorch (1.5.0-2) experimental; urgency=medium
+
+  * Install NOTICE to the binary files
+  * Fix the path globs in d/copyright.
+  * Add lintian overrides.
+  * Track the shlibs symbols of binary package libtorch1.
+  * Patch the usr/bin/env shabang.
+
+ -- Mo Zhou <lumin@debian.org>  Wed, 29 Apr 2020 18:14:25 +0800
+
+pytorch (1.5.0-1) experimental; urgency=medium
+
+  * Initial release. (Closes: #853923)
+
+ -- Mo Zhou <lumin@debian.org>  Wed, 29 Apr 2020 13:11:46 +0800

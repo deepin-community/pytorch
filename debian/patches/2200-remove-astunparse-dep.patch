@@ -1,0 +1,64 @@
+Description: Remove dependency on astunparse
+ It has been replaced with ast.unparse since Python 3.9.
+Author: Shengqi Chen <harry-chen@outlook.com>
+Bug-Debian: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1086773
+Forwarded: not-needed
+ Upstream needs it to support python 3.8.
+Last-Update: 2024-11-06
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/benchmarks/dynamo/Makefile
++++ b/benchmarks/dynamo/Makefile
+@@ -27,7 +27,7 @@
+ 	# conda env remove --name torchdynamo
+ 	# conda create --name torchdynamo -y python=3.8
+ 	# conda activate torchdynamo
+-	conda install -y astunparse numpy scipy ninja pyyaml mkl mkl-include setuptools cmake \
++	conda install -y numpy scipy ninja pyyaml mkl mkl-include setuptools cmake \
+ 		typing-extensions requests protobuf numba cython scikit-learn
+ 	conda install -y -c pytorch magma-cuda116
+ 	conda install -y -c conda-forge librosa
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -2,7 +2,6 @@
+ requires = [
+     "setuptools",
+     "wheel",
+-    "astunparse",
+     "numpy",
+     "ninja",
+     "pyyaml",
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -1,5 +1,4 @@
+ # Python dependencies required for development
+-astunparse
+ expecttest>=0.2.1
+ hypothesis
+ numpy
+--- a/torch/jit/frontend.py
++++ b/torch/jit/frontend.py
+@@ -74,13 +74,7 @@
+ from torch.jit._monkeytype_config import get_qualified_name, monkeytype_trace
+ 
+ 
+-_IS_ASTUNPARSE_INSTALLED = False
+-try:
+-    import astunparse  # type: ignore[import]
+-
+-    _IS_ASTUNPARSE_INSTALLED = True
+-except ImportError:
+-    pass
++_IS_ASTUNPARSE_INSTALLED = True
+ 
+ # Borrowed from cPython implementation
+ # https://github.com/python/cpython/blob/561612d8456cfab5672c9b445521113b847bd6b3/Lib/textwrap.py#L411#
+@@ -583,7 +577,7 @@
+     ignore_function.body.append(return_stmt)  # type: ignore[attr-defined]
+ 
+     # registers the custom function in the global context
+-    ignore_func_str = "@torch.jit.ignore\n" + astunparse.unparse(ignore_function)
++    ignore_func_str = "@torch.jit.ignore\n" + ast.unparse(ignore_function)
+     ignore_func_str += f'\nglobals()["{ignore_function_name}"] = {ignore_function_name}'
+     exec(ignore_func_str)  # noqa: P204
+ 

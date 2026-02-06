@@ -1,0 +1,27 @@
+Description: use system cpp-httplib instead.
+Forwarded: not-needed
+
+--- a/cmake/Dependencies.cmake
++++ b/cmake/Dependencies.cmake
+@@ -1687,8 +1687,9 @@
+ include(${CMAKE_CURRENT_LIST_DIR}/FlatBuffers.cmake)
+ 
+ # Include cpp-httplib
+-add_library(httplib INTERFACE IMPORTED)
+-target_include_directories(httplib SYSTEM INTERFACE ${PROJECT_SOURCE_DIR}/third_party/cpp-httplib)
++add_library(httplib SHARED IMPORTED)
++find_library(HTTPLIB_LIBRARY cpp-httplib REQUIRED)
++set_property(TARGET httplib PROPERTY IMPORTED_LOCATION "${HTTPLIB_LIBRARY}")
+ 
+ # Include nlohmann-json
+ add_library(nlohmann INTERFACE IMPORTED)
+--- a/caffe2/CMakeLists.txt
++++ b/caffe2/CMakeLists.txt
+@@ -783,6 +783,7 @@
+     set_property(TARGET fmt PROPERTY IMPORTED_LOCATION "${FMT_LIBRARY}")
+ endif()
+ target_link_libraries(torch_cpu PRIVATE fmt)
++target_link_libraries(torch_cpu PRIVATE cpp-httplib)
+ 
+ torch_compile_options(torch_cpu)  # see cmake/public/utils.cmake
+ 

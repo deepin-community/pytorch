@@ -1,0 +1,43 @@
+Description: let it fallback to use the old NVTX3 headers. Grep the code with
+ TORCH_CUDA_USE_NVTX3 can you will find the simple fallback logic. The new
+ header needs new nvtx packages. The old one is already in nvidia-cuda-dev.
+Forward: no need.
+Index: pytorch/cmake/public/cuda.cmake
+===================================================================
+--- pytorch.orig/cmake/public/cuda.cmake	2025-03-02 23:57:21.816847956 +0000
++++ pytorch/cmake/public/cuda.cmake	2025-03-02 23:58:02.487642538 +0000
+@@ -176,15 +176,8 @@
+   find_path(nvtx3_dir NAMES nvtx3 PATHS "${PROJECT_SOURCE_DIR}/third_party/NVTX/c/include" NO_DEFAULT_PATH)
+ endif()
+ find_package_handle_standard_args(nvtx3 DEFAULT_MSG nvtx3_dir)
+-if(nvtx3_FOUND)
+-  add_library(torch::nvtx3 INTERFACE IMPORTED)
+-  target_include_directories(torch::nvtx3 INTERFACE "${nvtx3_dir}")
+-  target_compile_definitions(torch::nvtx3 INTERFACE TORCH_CUDA_USE_NVTX3)
+-else()
+-  message(WARNING "Cannot find NVTX3, find old NVTX instead")
+-  add_library(torch::nvtoolsext INTERFACE IMPORTED)
+-  set_property(TARGET torch::nvtoolsext PROPERTY INTERFACE_LINK_LIBRARIES CUDA::nvToolsExt)
+-endif()
++add_library(torch::nvtoolsext INTERFACE IMPORTED)
++set_property(TARGET torch::nvtoolsext PROPERTY INTERFACE_LINK_LIBRARIES CUDA::nvToolsExt)
+ 
+ 
+ # cublas
+Index: pytorch/caffe2/CMakeLists.txt
+===================================================================
+--- pytorch.orig/caffe2/CMakeLists.txt	2025-03-02 23:57:21.816847956 +0000
++++ pytorch/caffe2/CMakeLists.txt	2025-03-02 23:57:31.168570741 +0000
+@@ -1580,11 +1580,7 @@
+   endif()
+   target_link_libraries(torch_cuda INTERFACE torch::cudart)
+   target_link_libraries(torch_cuda PUBLIC c10_cuda)
+-  if(TARGET torch::nvtx3)
+-    target_link_libraries(torch_cuda PRIVATE torch::nvtx3)
+-  else()
+-    target_link_libraries(torch_cuda PUBLIC torch::nvtoolsext)
+-  endif()
++  target_link_libraries(torch_cuda PUBLIC torch::nvtoolsext)
+ 
+   target_include_directories(
+       torch_cuda INTERFACE $<INSTALL_INTERFACE:include>)

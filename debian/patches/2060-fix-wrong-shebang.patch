@@ -1,0 +1,38 @@
+Description: fix wrong shebang
+Author: Mo Zhou
+Forwarded: not-needed
+Last-update: 2023-07-17
+
+-- 
+--- a/torch/distributed/elastic/__init__.py
++++ b/torch/distributed/elastic/__init__.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env/python3
++#!/usr/bin/python3
+ 
+ # Copyright (c) Facebook, Inc. and its affiliates.
+ # All rights reserved.
+--- a/torch/distributed/elastic/events/__init__.py
++++ b/torch/distributed/elastic/events/__init__.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env/python3
++#!/usr/bin/python3
+ 
+ # Copyright (c) Facebook, Inc. and its affiliates.
+ # All rights reserved.
+--- a/torch/distributed/elastic/metrics/__init__.py
++++ b/torch/distributed/elastic/metrics/__init__.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env/python3
++#!/usr/bin/python3
+ # mypy: allow-untyped-defs
+ 
+ # Copyright (c) Facebook, Inc. and its affiliates.
+--- a/torch/distributed/launcher/__init__.py
++++ b/torch/distributed/launcher/__init__.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env/python3
++#!/usr/bin/python3
+ 
+ # Copyright (c) Facebook, Inc. and its affiliates.
+ # All rights reserved.

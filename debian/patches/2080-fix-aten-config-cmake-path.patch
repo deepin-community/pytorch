@@ -1,0 +1,16 @@
+Description: avoid including the build path in the cmake configuration file
+Fixes: #1031687
+Forwarded: not-needed
+Last-update: 2023-09-06
+
+---
+
+--- a/aten/src/ATen/ATenConfig.cmake.in
++++ b/aten/src/ATen/ATenConfig.cmake.in
+@@ -5,5 +5,5 @@
+ # ATEN_FOUND -- set to 1 if found
+ 
+ set(ATEN_FOUND 1)
+-set(ATEN_INCLUDE_DIR "@ATEN_INCLUDE_DIR@")
++set(ATEN_INCLUDE_DIR "/usr/include")
+ set(ATEN_LIBRARIES "@ATEN_LIBRARIES@")

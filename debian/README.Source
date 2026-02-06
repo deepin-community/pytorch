@@ -1,0 +1,80 @@
+===============================================================================
+Different Variants of PyTorch Build
+===============================================================================
+
+[CPU] The default build is the cpu-only variant.
+
+[CUDA] The script debian/cudabuild.sh is provided to convert the debian
+ directory for the cuda build.
+
+[ROCM] The script debian/rocmbuild.sh is provided to convert the debian
+ directory for the rocm build.
+
+All the three variants must share a identical copy of the upstream source.
+All changes towards the CUDA or the ROCM variant must be merged back to the
+codebase of the CPU version, or they will be lost upon the next upload.
+
+===============================================================================
+Dependency Snapshot Tracker for Package Maintainer
+===============================================================================
+
+The following is the submodule list for the HEAD/refs/tags/v2.6.0-rc7.
+To get this list, you need to run `git submodule` at the upstream git repository.
+We track the dependency status here for convenience.
+
+Updated: Jan 28 2025
+
+[Ignored Dependencies : not for us]
+
+3147391d946bb4b6c68edd901f2add6ac1f31f8c third_party/eigen (3.4.0)                                 [NOTE] 3.4.0 in sid, but requires feature in newer snapshot
+0d98dba29d66e93259db7daa53a9327df767a415 third_party/benchmark (v1.6.1)                            [OK] 1.9.1 in sid
+3b6597bba913d51161383657829b7e644e59c006 third_party/cpp-httplib (v0.15.3)                         [OK] 0.18.0 in sid
+0c9fce2ffefecfdce794e1859584e25877b7b592 third_party/fmt (11.0.2)                                  [OK] 10.1.1 in sid, 11.1.1 in exp (both can compile), needs transition and upgrade
+b514bdc898e2951020cbdca1304b75f5950d1f59 third_party/googletest (1.15.2)                           [OK] 1.15.2 in sid
+87cda1d6646592ac5866dc703c8e1839046a6806 third_party/nlohmann (v3.10.1-113-g87cda1d6)              [OK] 3.11.3 in sid
+a2e59f0e7065404b44dfe92a28aca47ba1378dc4 third_party/pybind11 (v2.13.6)                            [OK] 2.13.6 in sid
+d1eca4e4b421cd2997495c4b4e65cea6be4e9b8a third_party/protobuf (v3.13.1)                            [OK] 3.21.12 in sid
+
+a6bfc237255a6bac1513f7c1ebde6d8aed6b5191 third_party/VulkanMemoryAllocator (v2.1.0-705-ga6bfc23)   [DISABLED] GPU? needs investigation.
+c07e3a0400713d546e0dea2d5466dd22ea389c73 third_party/NNPACK (c07e3a0)                              [DISABLED] we disabled this. see d/rules. has not been updated for very long time.
+f45429b087dd7d5bc78bb40dc7cf06425c252d67 third_party/python-peachpy (remotes/origin/pre-generated) [DISABLED] not yet enabled. see d/rules.
+3fb5c176c17c765a3492cd2f0321b0dab712f350 third_party/gemmlowp/gemmlowp                             [DISABLED] not enabled. see d/rules.
+52791a2fd214b2a9dc5759d36725909c1daa7f2e third_party/tensorpipe                                    [DISABLED] 0.0~git20220513.bb1473a in sid. newer than this snapshot. but deprecated upstream.
+a799f4aed9c94b765dcdaabaeab7d5e7e2310878 third_party/opentelemetry-cpp (v1.14.2)                   [DISABLED] newer version (v1.17.0) in debian. Pytorch does not actually use it now.
+
+b66e3214d8a104669c2ec05ae91ebc26a8f5ab78 third_party/mimalloc (v1.8.2)                             [SKIP] The *malloc libraries are generally optional.
+5b8a7d7422611c3a0d799fb5fc5dd4abfae35b42 third_party/ittapi (v3.23.0-14-g5b8a7d7)                  [SKIP] this is optional.
+dbc3157bf256f1339b3fa1fef2be89ac4078be0e third_party/fbgemm (v0.4.1-446-gdbc3157b)                 [SKIP] This is optional.
+
+[Dependencies maintained by Mo Zhou <lumin@debian.org>]
+
+01834de25e4bf3975a9a00e816292b1ad0fe184b third_party/flatbuffers (v23.3.3)   [OK] 23.5.26 in sid. new than this snapshot.
+ab2b89c4c339bd7f816fbc114a4b05d386b66290 third_party/nccl/nccl (v2.21.5)     [OK] 2.22.3 in sid. new than this snapshot.
+60e76d2bce17d278b439d9da17177c8f957a9e9b third_party/sleef (pre-3.6.1)       [OK] 3.6.1 in sid. new than this snapshot.
+936021bfed8c91dc416af1588b2c4eca631a9e45 third_party/cudnn_frontend (v1.8.0) [TODO] 1.6.1 in sid. need to upgrade.
+bbe579a9e3beb6ea6626d9227ec32d0dae119a49 third_party/cutlass (v3.4.1)        [OK] 3.4.1 in sid. up to date.
+
+[Dependencies maintained by Debian Deep Learning Team <debian-ai@lists.debian.org>]
+
+4dfe081cf6bcd15db339cf2680b9281b8451eeb3 third_party/FP16 (4dfe081)            [OK] 0.0~git20200514.4dfe081 in sid. up to date.
+b408327ac2a15ec3e43352421954f5b1967701d1 third_party/FXdiv (b408327)           [OK] 0.0~git20200417.b408327 in sid. up to date.
+072586a71b55b7f8c584153d223e95687148a900 third_party/psimd (heads/master)      [OK] 0.0~git20200517.072586a in sid. up to date.
+3b6597bba913d51161383657829b7e644e59c006 third_party/cpuinfo                   [OK] 0.0~git20250110.8a1772a in sid. up to date.
+c7ccd5bdbe5434ba156f4e856dcef0601637334b third_party/ideep                     [OK] 0.0~git20250115.9873ffc in sid. up to date. (onednn 3.7~pc in exp)
+4fe0e1e183925bf8cfa6aae24237e724a96479b8 third_party/pthreadpool               [OK] 0.0~git20240616.560c60d in sid. newer than this snapshot. 
+5354032ea08eadd7fc4456477f7f7c6308818509 third_party/gloo                      [OK] 0.0~git20231202.5354032 in sid. up to date.
+b8baa8446686496da4cc8fda09f2b6fe65c2a02c third_party/onnx (v1.17.0)            [OK] 1.17.0 in sid
+4ea82e595b36106653175dcb04b2aa532660d0d8 third_party/XNNPACK                   [TODO] 0.0~git20241108.4ea82e5 in exp.
+
+[Embedded Sources]
+
+338140f58a28d599da3434ced4fd2d75dd1a213d third_party/kineto                    [TODO] embedded d9753139d181b9ff42872465aac0e5d3018be415 in debian/
+9d3ab05a7fffbc71a492bc6a17be034e83e8f0fe third_party/pocketfft                 [OK] embedded 9d3ab05a7fffbc71a492bc6a17be034e83e8f0fe in debian/
+
+[Other Items]
+
+e170594ac7cf1dac584da473d4ca9301087090c1 third_party/NVTX
+[TODO] new dependency, seems optional and might be replaced with libnvtoolsext from nvidia-cuda-toolkit
+
+50ee4267e27b875d149e642f4cebd47be1dc3b57 composable_kernel
+[NEW] ROCM-related.

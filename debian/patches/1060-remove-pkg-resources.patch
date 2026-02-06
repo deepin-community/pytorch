@@ -1,0 +1,32 @@
+Description: Remove use of deprecated pkg_resources module.
+ Replace with importlib.metadata from stdlib
+Author: Shengqi Chen <harry-chen@outlook.com>
+Bug: https://github.com/pytorch/pytorch/issues/139170
+Bug-Debian: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1083727
+Last-Update: 2024-10-29 
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/test/run_test.py
++++ b/test/run_test.py
+@@ -19,7 +19,7 @@
+ from pathlib import Path
+ from typing import Any, cast, Dict, List, NamedTuple, Optional, Sequence, Tuple, Union
+ 
+-import pkg_resources
++from importlib.metadata import Distribution, PackageNotFoundError
+ 
+ import torch
+ import torch.distributed as dist
+@@ -2102,9 +2102,10 @@
+         "pytest-flakefinder",
+         "pytest-xdist",
+     ]
+-    installed_packages = [i.key for i in pkg_resources.working_set]
+     for package in packages:
+-        if package not in installed_packages:
++        try:
++            Distribution.from_name(package)
++        except PackageNotFoundError:
+             print_to_stderr(
+                 f"Missing pip dependency: {package}, please run `pip install -r .ci/docker/requirements-ci.txt`"
+             )
