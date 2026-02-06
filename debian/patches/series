@@ -13,3 +13,4 @@
 2210-disable-fno-math-errno-on-arm64-to-workaround-gcc14-bug.patch
 2220-disable-sve-on-arm64.patch
 2300-torch-cuda-no-use-nvtx3.patch
+0016-override-SWALR.state_dict-and-load_state_dict-163122.patch

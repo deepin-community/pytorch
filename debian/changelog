@@ -1,3 +1,9 @@
+pytorch (2.6.0+dfsg-5deepin1) unstable; urgency=medium
+
+  * Fix CVE-2026-24747.
+
+ -- Tianyu Chen <sweetyfish@deepin.org>  Fri, 06 Feb 2026 18:30:07 +0800
+
 pytorch (2.6.0+dfsg-5) unstable; urgency=medium
 
   * Bugfix in SOVERSION patch and add missing libraries in shlib file.
