@@ -1,0 +1,127 @@
+From: Filip <f@filip.world>
+Date: Wed, 17 Sep 2025 18:17:20 +0000
+Subject: override SWALR.state_dict and load_state_dict (#163122)
+
+Fixes #163105
+
+Note that the new `SWALR.load_state_dict` is **not backwards compatible**:
+```python
+@override
+def load_state_dict(self, state_dict: dict[str, Any]) -> None:
+  """Load the scheduler's state.
+
+  Args:
+      state_dict (dict): scheduler state. Should be an object returned
+          from a call to :meth:`state_dict`.
+  """
+  self.__dict__.update(state_dict)
+  self._set_anneal_func(self._anneal_strategy)
+```
+
+If we'd like to maintain compatibility with old state_dicts (loaded with `weights_only=False`), we could use something along these lines:
+```python
+@override
+def load_state_dict(self, state_dict: dict[str, Any]) -> None:
+    """Load the scheduler's state.
+
+    Args:
+        state_dict (dict): scheduler state. Should be an object returned
+            from a call to :meth:`state_dict`.
+    """
+    anneal_func = state_dict.pop("anneal_func", None)
+    strategy = state_dict.get("_anneal_strategy")
+    self.__dict__.update(state_dict)
+
+    if anneal_func is not None:
+        state_dict["anneal_func"] = anneal_func
+        if strategy is None:
+            if anneal_func == self._linear_anneal:
+                strategy = "linear"
+            elif anneal_func == self._cosine_anneal:
+                strategy = "cos"
+
+    if strategy is None:
+        strategy = getattr(self, "_anneal_strategy", "cos")
+
+    self._set_anneal_func(strategy)
+```
+
+But given the fact that loading an `SWALR` state_dict before this PR would have caused an error, this seems okay. A GitHub/Google search for `SWALR.load_state_dict` had no results. Happy to change if not, or add a warning just in case.
+Pull Request resolved: https://github.com/pytorch/pytorch/pull/163122
+Approved by: https://github.com/janeyx99
+---
+ test/optim/test_lrscheduler.py |  1 +
+ torch/optim/swa_utils.py       | 37 +++++++++++++++++++++++++++++++++----
+ 2 files changed, 34 insertions(+), 4 deletions(-)
+
+diff --git a/test/optim/test_lrscheduler.py b/test/optim/test_lrscheduler.py
+index 316d639..6493da2 100644
+--- a/test/optim/test_lrscheduler.py
++++ b/test/optim/test_lrscheduler.py
+@@ -2414,6 +2414,7 @@ class TestLRScheduler(TestCase):
+             partial(CyclicLR, base_lr=0.01, max_lr=0.1),
+             partial(OneCycleLR, max_lr=0.01, total_steps=10, anneal_strategy="linear"),
+             partial(CosineAnnealingWarmRestarts, T_0=20),
++            partial(SWALR, swa_lr=0.01),
+         ],
+     )
+     @parametrize("weights_only", [True, False])
+diff --git a/torch/optim/swa_utils.py b/torch/optim/swa_utils.py
+index d568283..c9e6ad6 100644
+--- a/torch/optim/swa_utils.py
++++ b/torch/optim/swa_utils.py
+@@ -5,6 +5,7 @@ import math
+ import warnings
+ from copy import deepcopy
+ from typing import Any, Callable, Iterable, List, Literal, Optional, Tuple, Union
++from typing_extensions import override
+ 
+ import torch
+ from torch import Tensor
+@@ -424,10 +425,7 @@ class SWALR(LRScheduler):
+                 "anneal_strategy must by one of 'cos' or 'linear', "
+                 f"instead got {anneal_strategy}"
+             )
+-        elif anneal_strategy == "cos":
+-            self.anneal_func = self._cosine_anneal
+-        elif anneal_strategy == "linear":
+-            self.anneal_func = self._linear_anneal
++        self._set_anneal_func(anneal_strategy)
+         if not isinstance(anneal_epochs, int) or anneal_epochs < 0:
+             raise ValueError(
+                 f"anneal_epochs must be equal or greater than 0, got {anneal_epochs}"
+@@ -475,3 +473,34 @@ class SWALR(LRScheduler):
+             group["swa_lr"] * alpha + lr * (1 - alpha)
+             for group, lr in zip(self.optimizer.param_groups, prev_lrs)
+         ]
++
++    def _set_anneal_func(self, anneal_strategy: Literal["cos", "linear"]):
++        self._anneal_strategy = anneal_strategy
++        if anneal_strategy == "cos":
++            self.anneal_func = self._cosine_anneal
++        else:
++            self.anneal_func = self._linear_anneal
++
++    @override
++    def state_dict(self) -> dict[str, Any]:
++        """Return the state of the scheduler as a :class:`dict`.
++
++        It contains an entry for every variable in self.__dict__ which
++        is not the optimizer or anneal_func.
++        """
++        return {
++            key: value
++            for key, value in self.__dict__.items()
++            if key not in ("optimizer", "anneal_func")
++        }
++
++    @override
++    def load_state_dict(self, state_dict: dict[str, Any]) -> None:
++        """Load the scheduler's state.
++
++        Args:
++            state_dict (dict): scheduler state. Should be an object returned
++                from a call to :meth:`state_dict`.
++        """
++        self.__dict__.update(state_dict)
++        self._set_anneal_func(self._anneal_strategy)
